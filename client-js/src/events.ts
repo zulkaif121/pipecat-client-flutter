@@ -8,6 +8,7 @@ import { RTVIClientConfigOption } from ".";
 import { LLMFunctionCallData } from "./helpers/llm";
 import {
   BotLLMTextData,
+  BotLLMSearchResponseData,
   BotReadyData,
   BotTTSTextData,
   PipecatMetricsData,
@@ -73,6 +74,8 @@ export enum RTVIEvent {
   LLMJsonCompletion = "llmJsonCompletion",
 
   StorageItemStored = "storageItemStored",
+
+  BotLlmSearchResponse = "botLlmSearchResponse",
 }
 
 export type RTVIEvents = Partial<{
@@ -132,6 +135,8 @@ export type RTVIEvents = Partial<{
   llmJsonCompletion: (data: string) => void;
 
   storageItemStored: (data: StorageItemStoredData) => void;
+
+  botLlmSearchResponse: (data: BotLLMSearchResponseData) => void;
 }>;
 
 export type RTVIEventHandler<E extends RTVIEvent> = E extends keyof RTVIEvents

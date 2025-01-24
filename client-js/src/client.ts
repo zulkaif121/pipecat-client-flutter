@@ -15,6 +15,7 @@ import { RTVIEvent, RTVIEvents } from "./events";
 import { RTVIClientHelper, RTVIClientHelpers } from "./helpers";
 import { logger, LogLevel } from "./logger";
 import {
+  BotLLMSearchResponseData,
   BotLLMTextData,
   BotReadyData,
   BotTTSTextData,
@@ -162,6 +163,7 @@ export type RTVIEventCallbacks = Partial<{
   onBotTtsText: (data: BotTTSTextData) => void;
   onBotTtsStarted: () => void;
   onBotTtsStopped: () => void;
+  onBotLlmSearchResponse: (data: BotLLMSearchResponseData) => void;
 
   onStorageItemStored: (data: StorageItemStoredData) => void;
 }>;
@@ -976,6 +978,15 @@ export class RTVIClient extends RTVIEventEmitter {
         break;
       case RTVIMessageType.BOT_TTS_STOPPED:
         this._options.callbacks?.onBotTtsStopped?.();
+        break;
+      case RTVIMessageType.BOT_LLM_SEARCH_RESPONSE:
+        this._options.callbacks?.onBotLlmSearchResponse?.(
+          ev.data as BotLLMSearchResponseData
+        );
+        this.emit(
+          RTVIEvent.BotLlmSearchResponse,
+          ev.data as BotLLMSearchResponseData
+        );
         break;
       case RTVIMessageType.METRICS:
         this.emit(RTVIEvent.Metrics, ev.data as PipecatMetricsData);

@@ -5,6 +5,12 @@ All notable changes to **Pipecat Client Web** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added an `onBotLlmSearchResponse` callback and `BotLlmSearchResponse` event to correspond with `RTVIBotLLMSearchResponseMessage`.
+
 ## [0.3.2] - 2024-12-16
 
 ### Added
@@ -15,8 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changes
 
-- `baseUrl` and `endpoints` are now optional parameters in the `RTVIClient` constructor (`RTVIClientParams`), allowing developers to connect directly to a transport without requiring a handshake auth bundle. 
-   - Note: Most transport services require an API key for secure operation, and setting these keys dangerously on the client is not recommended for production. This change intends to simplify testing and local developement where running a server-side connect method can be cumbersome.
+- `baseUrl` and `endpoints` are now optional parameters in the `RTVIClient` constructor (`RTVIClientParams`), allowing developers to connect directly to a transport without requiring a handshake auth bundle.
+  - Note: Most transport services require an API key for secure operation, and setting these keys dangerously on the client is not recommended for production. This change intends to simplify testing and local developement where running a server-side connect method can be cumbersome.
 
 ## [0.3.1] - 2024-12-10
 
@@ -33,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `realtime-ai` is now `@pipecat-ai/client-js`
   - `realtime-ai-react` is now `@pipecat-ai/client-react`
 
-Please update your imports to the new package names. 
+Please update your imports to the new package names.
 
 ## [0.2.3] - 2024-12-09
 
