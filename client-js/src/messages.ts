@@ -46,6 +46,7 @@ export enum RTVIMessageType {
   BOT_TTS_TEXT = "bot-tts-text", // Bot TTS text output (streamed word as it is spoken)
   BOT_TTS_STARTED = "bot-tts-started", // Bot TTS response starts
   BOT_TTS_STOPPED = "bot-tts-stopped", // Bot TTS response stops
+  BOT_LLM_SEARCH_RESPONSE = "bot-llm-search-response", // Bot LLM search response
   // Storage
   STORAGE_ITEM_STORED = "storage-item-stored", // Item was stored to configured storage, if applicable
 }
@@ -90,6 +91,23 @@ export type BotTTSTextData = {
 export type StorageItemStoredData = {
   action: string;
   items: unknown;
+};
+
+export type LLMSearchResult = {
+  text: string;
+  confidence: number[];
+};
+
+export type LLMSearchOrigin = {
+  site_uri?: string;
+  site_title?: string;
+  results: LLMSearchResult[];
+};
+
+export type BotLLMSearchResponseData = {
+  search_result?: string;
+  rendered_content?: string;
+  origins: LLMSearchOrigin[];
 };
 
 // ----- Message Classes
