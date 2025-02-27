@@ -76,6 +76,7 @@ export enum RTVIEvent {
   StorageItemStored = "storageItemStored",
 
   BotLlmSearchResponse = "botLlmSearchResponse",
+  ServerMessage = "serverMessage",
 }
 
 export type RTVIEvents = Partial<{
@@ -137,6 +138,7 @@ export type RTVIEvents = Partial<{
   storageItemStored: (data: StorageItemStoredData) => void;
 
   botLlmSearchResponse: (data: BotLLMSearchResponseData) => void;
+  serverMessage: (data: any) => void;
 }>;
 
 export type RTVIEventHandler<E extends RTVIEvent> = E extends keyof RTVIEvents

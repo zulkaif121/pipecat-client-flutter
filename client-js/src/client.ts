@@ -166,6 +166,8 @@ export type RTVIEventCallbacks = Partial<{
   onBotLlmSearchResponse: (data: BotLLMSearchResponseData) => void;
 
   onStorageItemStored: (data: StorageItemStoredData) => void;
+
+  onServerMessage: (data: any) => void;
 }>;
 
 abstract class RTVIEventEmitter extends (EventEmitter as unknown as new () => TypedEmitter<RTVIEvents>) {}
@@ -997,6 +999,11 @@ export class RTVIClient extends RTVIEventEmitter {
           ev.data as StorageItemStoredData
         );
         break;
+      case RTVIMessageType.SERVER_MESSAGE: {
+        this._options.callbacks?.onServerMessage?.(ev.data);
+        this.emit(RTVIEvent.ServerMessage, ev.data);
+        break;
+      }
       default: {
         let match: boolean = false;
         // Pass message to registered helpers

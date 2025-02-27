@@ -49,6 +49,8 @@ export enum RTVIMessageType {
   BOT_LLM_SEARCH_RESPONSE = "bot-llm-search-response", // Bot LLM search response
   // Storage
   STORAGE_ITEM_STORED = "storage-item-stored", // Item was stored to configured storage, if applicable
+  // Server-to-client messages
+  SERVER_MESSAGE = "server-message",
 }
 
 // ----- Message Data Types
@@ -108,6 +110,10 @@ export type BotLLMSearchResponseData = {
   search_result?: string;
   rendered_content?: string;
   origins: LLMSearchOrigin[];
+};
+
+export type ServerMessageData = {
+  data: any;
 };
 
 // ----- Message Classes
