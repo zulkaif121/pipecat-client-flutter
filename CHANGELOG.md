@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added an `onBotLlmSearchResponse` callback and `BotLlmSearchResponse` event to correspond with `RTVIBotLLMSearchResponseMessage`.
 
+- Added an `onServerMessage` callback and `ServerMessage` event to correspond with `RTVIServerMessage`.
+
 ## [0.3.2] - 2024-12-16
 
 ### Added
