@@ -549,12 +549,10 @@ export class RTVIClient extends RTVIEventEmitter {
 
     await this._transport.disconnect();
 
-    this._initialize();
+    this._messageDispatcher = new MessageDispatcher(this);
   }
 
   private _initialize() {
-    // Reset transport
-    this._transport = this._options.transport;
     this._transport.initialize(this._options, this.handleMessage.bind(this));
 
     // Create a new message dispatch queue for async message handling
