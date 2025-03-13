@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.4] - 2025-03-13
+
+### Changes
+
+- Changed transport initialization to only occur in the RTVIClient constructor and not in its `disconnect`. This allows Transports to better reason about and be in control of what happens in both the initialize and disconnect methods.
+
 ## [0.3.3] - 2025-02-28
 
 ### Added
