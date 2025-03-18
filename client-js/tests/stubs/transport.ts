@@ -5,7 +5,6 @@
  */
 
 import {
-  RTVI_ACTION_TYPE,
   RTVIClientOptions,
   RTVIMessage,
   RTVIMessageType,
@@ -147,7 +146,7 @@ export class TransportStub extends Transport {
   }
 
   public sendMessage(message: RTVIMessage) {
-    if (message.type === RTVI_ACTION_TYPE) {
+    if (message.type === RTVIMessageType.ACTION) {
       this._onMessage({
         type: RTVIMessageType.ACTION_RESPONSE,
         id: "123",
