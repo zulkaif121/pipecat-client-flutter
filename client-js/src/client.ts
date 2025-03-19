@@ -20,6 +20,7 @@ import {
   BotReadyData,
   BotTTSTextData,
   ConfigData,
+  ErrorData,
   MessageDispatcher,
   PipecatMetricsData,
   RTVIActionRequest,
@@ -206,7 +207,16 @@ export class RTVIClient extends RTVIEventEmitter {
       },
       onError: (message: RTVIMessage) => {
         options?.callbacks?.onError?.(message);
-        this.emit(RTVIEvent.Error, message);
+        try {
+          this.emit(RTVIEvent.Error, message);
+        } catch (e) {
+          logger.debug("Could not emit error", message);
+        }
+        const data = message.data as ErrorData;
+        if (data?.fatal) {
+          logger.error("Fatal error reported. Disconnecting...");
+          this.disconnect();
+        }
       },
       onConnected: () => {
         options?.callbacks?.onConnected?.();
@@ -525,13 +535,13 @@ export class RTVIClient extends RTVIEventEmitter {
             authBundle,
             this._abortController as AbortController
           );
+          await this._transport.sendReadyMessage();
         } catch (e) {
           clearTimeout(this._handshakeTimeout);
+          this.disconnect();
           reject(e);
           return;
         }
-
-        await this._transport.sendReadyMessage();
       })();
     });
   }

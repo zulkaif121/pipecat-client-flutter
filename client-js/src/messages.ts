@@ -64,6 +64,11 @@ export type BotReadyData = {
   version: string;
 };
 
+export type ErrorData = {
+  message: string;
+  fatal: boolean;
+};
+
 export type PipecatMetricData = {
   processor: string;
   value: number;
@@ -166,6 +171,10 @@ export class RTVIMessage {
 
   static disconnectBot(): RTVIMessage {
     return new RTVIMessage(RTVIMessageType.DISCONNECT_BOT, {});
+  }
+
+  static error(message: string, fatal = false): RTVIMessage {
+    return new RTVIMessage(RTVIMessageType.ERROR, { message, fatal });
   }
 }
 
