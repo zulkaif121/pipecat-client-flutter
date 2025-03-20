@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Added a getter to the client for getting the underlying transport. The transport that is returned is safe-guarded so that calls like `connect`/`disconnect` which should be called by the client are rejected.
+
+- Added missing support for handling fatal transport errors. Transports should call the onError callback with a data field `fatal: true` to trigger an client disconnect.
+
+- Improved action types for cleaner handling
+
 ## [0.3.4] - 2025-03-13
 
 ### Changes

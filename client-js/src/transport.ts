@@ -92,3 +92,50 @@ export abstract class Transport {
 
   abstract tracks(): Tracks;
 }
+
+export class TransportWrapper {
+  private _transport: Transport;
+  private _proxy: Transport;
+
+  constructor(transport: Transport) {
+    this._transport = transport;
+    this._proxy = new Proxy(this._transport, {
+      get: (target, prop, receiver) => {
+        if (typeof target[prop as keyof Transport] === "function") {
+          let errMsg;
+          switch (String(prop)) {
+            // Disable methods that modify the lifecycle of the call. These operations
+            // should be performed via the RTVI client in order to keep state in sync.
+            case "initialize":
+              errMsg = `Calls to initialize() are disabled and used internally by the RTVIClient`;
+              break;
+            case "sendReadyMessage":
+              errMsg = `Calls to sendReadyMessage() are disabled and used internally by the RTVIClient`;
+              break;
+            case "connect":
+              errMsg = `Calls to connect() are disabled. Please use RTVIClient.connect()`;
+              break;
+            case "disconnect":
+              errMsg = `Calls to disconnect() are disabled. Please use RTVIClient.disconnect()`;
+              break;
+          }
+          if (errMsg) {
+            return () => {
+              throw new Error(errMsg);
+            };
+          }
+          // Forward other method calls
+          return (...args: any[]) => {
+            return (target[prop as keyof Transport] as Function)(...args);
+          };
+        }
+        // Forward property access
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+  }
+
+  get proxy(): Transport {
+    return this._proxy;
+  }
+}
