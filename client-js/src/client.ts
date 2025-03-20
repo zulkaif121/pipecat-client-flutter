@@ -31,7 +31,13 @@ import {
   StorageItemStoredData,
   TranscriptData,
 } from "./messages";
-import { Participant, Tracks, Transport, TransportState } from "./transport";
+import {
+  Participant,
+  Tracks,
+  Transport,
+  TransportState,
+  TransportWrapper,
+} from "./transport";
 
 export type ConfigOption = {
   name: string;
@@ -181,6 +187,7 @@ export class RTVIClient extends RTVIEventEmitter {
   private _helpers: RTVIClientHelpers;
   private _startResolve: ((value: unknown) => void) | undefined;
   protected _transport: Transport;
+  protected _transportWrapper: TransportWrapper;
   protected declare _messageDispatcher: MessageDispatcher;
 
   constructor(options: RTVIClientOptions) {
@@ -196,6 +203,7 @@ export class RTVIClient extends RTVIEventEmitter {
 
     this._helpers = {};
     this._transport = options.transport;
+    this._transportWrapper = new TransportWrapper(this._transport);
 
     // Wrap transport callbacks with event triggers
     // This allows for either functional callbacks or .on / .off event listeners
@@ -574,6 +582,10 @@ export class RTVIClient extends RTVIEventEmitter {
    */
   public get connected(): boolean {
     return ["connected", "ready"].includes(this._transport.state);
+  }
+
+  public get transport(): Transport {
+    return this._transportWrapper.proxy;
   }
 
   public get state(): TransportState {
