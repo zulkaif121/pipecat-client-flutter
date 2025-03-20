@@ -21,6 +21,7 @@ export enum RTVIMessageType {
   DESCRIBE_CONFIG = "describe-config",
   DESCRIBE_ACTIONS = "describe-actions",
   DISCONNECT_BOT = "disconnect-bot",
+  ACTION = "action",
 
   // Inbound
   BOT_READY = "bot-ready", // Bot is connected and ready to receive messages
@@ -171,8 +172,6 @@ export class RTVIMessage {
 
 // ----- Action Types
 
-export const RTVI_ACTION_TYPE = "action";
-
 export type RTVIActionRequestData = {
   service: string;
   action: string;
@@ -181,7 +180,7 @@ export type RTVIActionRequestData = {
 
 export class RTVIActionRequest extends RTVIMessage {
   constructor(data: RTVIActionRequestData) {
-    super(RTVI_ACTION_TYPE, data);
+    super(RTVIMessageType.ACTION, data);
   }
 }
 

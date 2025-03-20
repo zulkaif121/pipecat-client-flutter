@@ -47,6 +47,13 @@ export enum LLMMessageType {
   LLM_JSON_COMPLETION = "llm-json-completion",
 }
 
+export enum LLMActionType {
+  APPEND_TO_MESSAGES = "append_to_messages",
+  GET_CONTEXT = "get_context",
+  SET_CONTEXT = "set_context",
+  RUN = "run",
+}
+
 // --- Callbacks
 export type LLMHelperCallbacks = Partial<{
   onLLMJsonCompletion: (jsonString: string) => void;
@@ -88,7 +95,7 @@ export class LLMHelper extends RTVIClientHelper {
     }
     const actionResponseMsg: RTVIActionResponse = await this._client.action({
       service: this._service,
-      action: "get_context",
+      action: LLMActionType.GET_CONTEXT,
     } as RTVIActionRequestData);
     return actionResponseMsg.data.result as LLMContext;
   }
@@ -113,7 +120,7 @@ export class LLMHelper extends RTVIClientHelper {
 
     const actionResponse: RTVIActionResponse = (await this._client.action({
       service: this._service,
-      action: "set_context",
+      action: LLMActionType.SET_CONTEXT,
       arguments: [
         {
           name: "messages",
@@ -138,7 +145,7 @@ export class LLMHelper extends RTVIClientHelper {
    */
 
   public async appendToMessages(
-    context: LLMContextMessage,
+    message: LLMContextMessage,
     runImmediately: boolean = false
   ): Promise<boolean> {
     if (this._client.state !== "ready") {
@@ -149,11 +156,11 @@ export class LLMHelper extends RTVIClientHelper {
 
     const actionResponse = (await this._client.action({
       service: this._service,
-      action: "append_to_messages",
+      action: LLMActionType.APPEND_TO_MESSAGES,
       arguments: [
         {
           name: "messages",
-          value: [context],
+          value: [message],
         },
         {
           name: "run_immediately",
@@ -178,7 +185,7 @@ export class LLMHelper extends RTVIClientHelper {
 
     return this._client.action({
       service: this._service,
-      action: "run",
+      action: LLMActionType.RUN,
       arguments: [
         {
           name: "interrupt",
