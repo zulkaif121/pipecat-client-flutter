@@ -109,6 +109,9 @@ export class TransportWrapper {
             case "initialize":
               errMsg = `Calls to initialize() are disabled and used internally by the RTVIClient`;
               break;
+            case "initDevices":
+              errMsg = `Calls to connect() are disabled. Please use RTVIClient.connect()`;
+              break;
             case "sendReadyMessage":
               errMsg = `Calls to sendReadyMessage() are disabled and used internally by the RTVIClient`;
               break;
