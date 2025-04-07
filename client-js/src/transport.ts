@@ -107,19 +107,19 @@ export class TransportWrapper {
             // Disable methods that modify the lifecycle of the call. These operations
             // should be performed via the RTVI client in order to keep state in sync.
             case "initialize":
-              errMsg = `Calls to initialize() are disabled and used internally by the RTVIClient`;
+              errMsg = `Direct calls to initialize() are disabled and used internally by the RTVIClient.`;
               break;
             case "initDevices":
-              errMsg = `Calls to connect() are disabled. Please use RTVIClient.connect()`;
+              errMsg = `Direct calls to initDevices() are disabled. Please use the RTVIClient.initDevices() wrapper or let RTVIClient.connect() call it for you.`;
               break;
             case "sendReadyMessage":
-              errMsg = `Calls to sendReadyMessage() are disabled and used internally by the RTVIClient`;
+              errMsg = `Direct calls to sendReadyMessage() are disabled and used internally by the RTVIClient.`;
               break;
             case "connect":
-              errMsg = `Calls to connect() are disabled. Please use RTVIClient.connect()`;
+              errMsg = `Direct calls to connect() are disabled. Please use the RTVIClient.connect() wrapper.`;
               break;
             case "disconnect":
-              errMsg = `Calls to disconnect() are disabled. Please use RTVIClient.disconnect()`;
+              errMsg = `Direct calls to disconnect() are disabled. Please use the RTVIClient.disconnect() wrapper.`;
               break;
           }
           if (errMsg) {
