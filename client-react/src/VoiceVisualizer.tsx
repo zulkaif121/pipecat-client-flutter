@@ -12,9 +12,10 @@ type ParticipantType = Parameters<typeof useRTVIClientMediaTrack>[1];
 interface Props {
   backgroundColor?: string;
   barColor?: string;
+  barCount?: number;
   barGap?: number;
-  barWidth?: number;
   barMaxHeight?: number;
+  barWidth?: number;
   participantType: ParticipantType;
 }
 
@@ -25,6 +26,7 @@ export const VoiceVisualizer: React.FC<Props> = React.memo(
     barWidth = 30,
     barGap = 12,
     barMaxHeight = 120,
+    barCount = 5,
     participantType,
   }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -37,7 +39,7 @@ export const VoiceVisualizer: React.FC<Props> = React.memo(
     useEffect(() => {
       if (!canvasRef.current) return;
 
-      const canvasWidth = 5 * barWidth + 4 * barGap;
+      const canvasWidth = barCount * barWidth + (barCount - 1) * barGap;
       const canvasHeight = barMaxHeight;
 
       const canvas = canvasRef.current;
@@ -75,13 +77,21 @@ export const VoiceVisualizer: React.FC<Props> = React.memo(
 
       canvasCtx.lineCap = "round";
 
-      const bands = [
-        { startFreq: 85, endFreq: 255, smoothValue: 0 }, // Covers fundamental frequencies for male and female voices
-        { startFreq: 255, endFreq: 500, smoothValue: 0 }, // Lower formants and some harmonics
-        { startFreq: 500, endFreq: 2000, smoothValue: 0 }, // Vowel formants and key consonant frequencies
-        { startFreq: 2000, endFreq: 4000, smoothValue: 0 }, // Higher formants, "clarity" of speech
-        { startFreq: 4000, endFreq: 8000, smoothValue: 0 }, // Sibilance and high-frequency consonants
-      ];
+      // Create frequency bands based on barCount
+      const bands = Array.from({ length: barCount }, (_, i) => {
+        // Exponentially distribute frequency ranges for better visualization
+        const minFreq = 85; // Minimum frequency to analyze
+        const maxFreq = 8000; // Maximum frequency to analyze
+
+        // Calculate start and end frequencies for each band
+        const exp = i / barCount;
+        const nextExp = (i + 1) / barCount;
+
+        const startFreq = minFreq * Math.pow(maxFreq / minFreq, exp);
+        const endFreq = minFreq * Math.pow(maxFreq / minFreq, nextExp);
+
+        return { startFreq, endFreq, smoothValue: 0 };
+      });
 
       const getFrequencyBinIndex = (frequency: number) => {
         const nyquist = audioContext.sampleRate / 2;
@@ -206,7 +216,15 @@ export const VoiceVisualizer: React.FC<Props> = React.memo(
         audioContext.close();
         window.removeEventListener("resize", resizeCanvas);
       };
-    }, [backgroundColor, barColor, barGap, barMaxHeight, barWidth, track]);
+    }, [
+      backgroundColor,
+      barColor,
+      barGap,
+      barMaxHeight,
+      barWidth,
+      barCount,
+      track,
+    ]);
 
     return (
       <canvas
