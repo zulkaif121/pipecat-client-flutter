@@ -12,9 +12,10 @@ type ParticipantType = Parameters<typeof useRTVIClientMediaTrack>[1];
 interface Props {
   backgroundColor?: string;
   barColor?: string;
+  barCount?: number;
   barGap?: number;
-  barWidth?: number;
   barMaxHeight?: number;
+  barWidth?: number;
   participantType: ParticipantType;
 }
 
@@ -25,6 +26,7 @@ export const VoiceVisualizer: React.FC<Props> = React.memo(
     barWidth = 30,
     barGap = 12,
     barMaxHeight = 120,
+    barCount = 5,
     participantType,
   }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -37,7 +39,7 @@ export const VoiceVisualizer: React.FC<Props> = React.memo(
     useEffect(() => {
       if (!canvasRef.current) return;
 
-      const canvasWidth = 5 * barWidth + 4 * barGap;
+      const canvasWidth = barCount * barWidth + (barCount - 1) * barGap;
       const canvasHeight = barMaxHeight;
 
       const canvas = canvasRef.current;
@@ -75,13 +77,29 @@ export const VoiceVisualizer: React.FC<Props> = React.memo(
 
       canvasCtx.lineCap = "round";
 
-      const bands = [
-        { startFreq: 85, endFreq: 255, smoothValue: 0 }, // Covers fundamental frequencies for male and female voices
-        { startFreq: 255, endFreq: 500, smoothValue: 0 }, // Lower formants and some harmonics
-        { startFreq: 500, endFreq: 2000, smoothValue: 0 }, // Vowel formants and key consonant frequencies
-        { startFreq: 2000, endFreq: 4000, smoothValue: 0 }, // Higher formants, "clarity" of speech
-        { startFreq: 4000, endFreq: 8000, smoothValue: 0 }, // Sibilance and high-frequency consonants
-      ];
+      // Create frequency bands based on barCount
+      const bands = Array.from({ length: barCount }, (_, i) => {
+        // Use improved logarithmic scale for better frequency distribution
+        const minFreq = barCount > 20 ? 200 : 80; // Adjust min frequency based on bar count
+        const maxFreq = 10000; // Cover most important audio frequencies
+
+        // Use Mel scale inspired approach for more perceptually uniform distribution
+        // This helps with a large number of bars by placing fewer in the very low range
+        // https://en.wikipedia.org/wiki/Mel_scale
+        const melMin = 2595 * Math.log10(1 + minFreq / 700);
+        const melMax = 2595 * Math.log10(1 + maxFreq / 700);
+        const melStep = (melMax - melMin) / barCount;
+
+        const melValue = melMin + i * melStep;
+        const startFreq = 700 * (Math.pow(10, melValue / 2595) - 1);
+        const endFreq = 700 * (Math.pow(10, (melValue + melStep) / 2595) - 1);
+
+        return {
+          startFreq,
+          endFreq,
+          smoothValue: 0,
+        };
+      });
 
       const getFrequencyBinIndex = (frequency: number) => {
         const nyquist = audioContext.sampleRate / 2;
@@ -206,7 +224,15 @@ export const VoiceVisualizer: React.FC<Props> = React.memo(
         audioContext.close();
         window.removeEventListener("resize", resizeCanvas);
       };
-    }, [backgroundColor, barColor, barGap, barMaxHeight, barWidth, track]);
+    }, [
+      backgroundColor,
+      barColor,
+      barGap,
+      barMaxHeight,
+      barWidth,
+      barCount,
+      track,
+    ]);
 
     return (
       <canvas
