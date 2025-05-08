@@ -9,6 +9,7 @@ import { atom, useAtomValue } from "jotai";
 import { atomFamily, useAtomCallback } from "jotai/utils";
 import { PrimitiveAtom } from "jotai/vanilla";
 import { useCallback, useEffect } from "react";
+
 import { useRTVIClient } from "./useRTVIClient";
 import { useRTVIClientEvent } from "./useRTVIClientEvent";
 
@@ -67,23 +68,34 @@ export const useRTVIClientMediaTrack = (
         if (oldTrack?.id === track.id) return;
         set(atom, track);
       },
-      [participantType, track, trackType]
+      []
     )
   );
 
   useRTVIClientEvent(
     RTVIEvent.TrackStarted,
-    useCallback((track: MediaStreamTrack, participant?: Participant) => {
-      updateTrack(track, track.kind as TrackType, Boolean(participant?.local));
-    }, [])
+    useCallback(
+      (track: MediaStreamTrack, participant?: Participant) => {
+        updateTrack(
+          track,
+          track.kind as TrackType,
+          Boolean(participant?.local)
+        );
+      },
+      [updateTrack]
+    )
   );
 
   useRTVIClientEvent(
     RTVIEvent.ScreenTrackStarted,
-    useCallback((track: MediaStreamTrack, participant?: Participant) => {
-      const trackType = track.kind === "audio" ? "screenAudio" : "screenVideo";
-      updateTrack(track, trackType, Boolean(participant?.local));
-    }, [])
+    useCallback(
+      (track: MediaStreamTrack, participant?: Participant) => {
+        const trackType =
+          track.kind === "audio" ? "screenAudio" : "screenVideo";
+        updateTrack(track, trackType, Boolean(participant?.local));
+      },
+      [updateTrack]
+    )
   );
 
   useEffect(() => {

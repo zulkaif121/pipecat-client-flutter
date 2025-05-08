@@ -6,6 +6,7 @@
 
 import { RTVIEvent, TransportState } from "@pipecat-ai/client-js";
 import { atom, useAtom } from "jotai";
+
 import { useRTVIClientEvent } from "./useRTVIClientEvent";
 
 const transportStateAtom = atom<TransportState>("disconnected");

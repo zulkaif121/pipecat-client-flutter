@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { useRTVIClient } from "./useRTVIClient";
+import React, { useCallback } from "react";
+
+import { useRTVIClientMicControl } from "./useRTVIClientMicControl";
 
 export interface RTVIClientMicToggleProps {
   /**
@@ -32,32 +33,15 @@ export const RTVIClientMicToggle: React.FC<RTVIClientMicToggleProps> = ({
   disabled = false,
   children,
 }) => {
-  const client = useRTVIClient();
-
-  const [isMicEnabled, setIsMicEnabled] = useState(
-    client?.isMicEnabled ?? false
-  );
-
-  // Sync component state with client state initially
-  useEffect(() => {
-    if (!client) return;
-    setIsMicEnabled(client.isMicEnabled);
-  }, [client]);
+  const { enableMic, isMicEnabled } = useRTVIClientMicControl();
 
   const handleToggleMic = useCallback(() => {
     if (disabled) return;
 
     const newEnabledState = !isMicEnabled;
-    setIsMicEnabled(newEnabledState);
-
-    if (client) {
-      client.enableMic(newEnabledState);
-    }
-
-    if (onMicEnabledChanged) {
-      onMicEnabledChanged(newEnabledState);
-    }
-  }, [client, disabled, isMicEnabled, onMicEnabledChanged]);
+    enableMic(newEnabledState);
+    onMicEnabledChanged?.(newEnabledState);
+  }, [disabled, enableMic, isMicEnabled, onMicEnabledChanged]);
 
   return (
     <>

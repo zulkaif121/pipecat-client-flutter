@@ -6,6 +6,7 @@
 
 import { RTVIEvent, RTVIEventHandler } from "@pipecat-ai/client-js";
 import { useEffect } from "react";
+
 import { useRTVIClient } from "./useRTVIClient";
 
 export const useRTVIClientEvent = <E extends RTVIEvent>(
