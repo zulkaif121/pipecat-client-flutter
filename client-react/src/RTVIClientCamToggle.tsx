@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { useRTVIClient } from "./useRTVIClient";
+import React, { useCallback } from "react";
+import { useRTVIClientCamControl } from "./useRTVIClientCamControl";
 
 export interface RTVIClientCamToggleProps {
   /**
@@ -32,32 +32,15 @@ export const RTVIClientCamToggle: React.FC<RTVIClientCamToggleProps> = ({
   disabled = false,
   children,
 }) => {
-  const client = useRTVIClient();
-
-  const [isCamEnabled, setIsCamEnabled] = useState(
-    client?.isCamEnabled ?? false
-  );
-
-  // Sync component state with client state initially
-  useEffect(() => {
-    if (!client) return;
-    setIsCamEnabled(client.isCamEnabled);
-  }, [client]);
+  const { isCamEnabled, enableCam } = useRTVIClientCamControl();
 
   const handleToggleCam = useCallback(() => {
     if (disabled) return;
 
     const newEnabledState = !isCamEnabled;
-    setIsCamEnabled(newEnabledState);
-
-    if (client) {
-      client.enableCam(newEnabledState);
-    }
-
-    if (onCamEnabledChanged) {
-      onCamEnabledChanged(newEnabledState);
-    }
-  }, [client, disabled, isCamEnabled, onCamEnabledChanged]);
+    enableCam(newEnabledState);
+    onCamEnabledChanged?.(newEnabledState);
+  }, [disabled, isCamEnabled, onCamEnabledChanged]);
 
   return (
     <>
