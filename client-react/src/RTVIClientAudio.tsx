@@ -6,6 +6,7 @@
 
 import { RTVIEvent } from "@pipecat-ai/client-js";
 import { useCallback, useEffect, useRef } from "react";
+
 import { useRTVIClientEvent } from "./useRTVIClientEvent";
 import { useRTVIClientMediaTrack } from "./useRTVIClientMediaTrack";
 

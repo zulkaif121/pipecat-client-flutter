@@ -2,6 +2,7 @@ import { RTVIEvent } from "@pipecat-ai/client-js";
 import { atom, useAtomValue } from "jotai";
 import { useAtomCallback } from "jotai/utils";
 import { useCallback, useEffect } from "react";
+
 import { useRTVIClient } from "./useRTVIClient";
 import { useRTVIClientEvent } from "./useRTVIClientEvent";
 

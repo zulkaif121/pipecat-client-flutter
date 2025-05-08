@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useRef } from "react";
+
 import { useRTVIClientMediaTrack } from "./useRTVIClientMediaTrack";
 
 type ParticipantType = Parameters<typeof useRTVIClientMediaTrack>[1];

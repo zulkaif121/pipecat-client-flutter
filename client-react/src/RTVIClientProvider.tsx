@@ -4,11 +4,10 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-import { createContext } from "react";
-
 import { RTVIClient } from "@pipecat-ai/client-js";
 import { createStore } from "jotai";
 import { Provider as JotaiProvider } from "jotai/react";
+import React, { createContext } from "react";
 
 export interface Props {
   client: RTVIClient;

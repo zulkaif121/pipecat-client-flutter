@@ -1,4 +1,5 @@
 import React, { useCallback } from "react";
+
 import { useRTVIClientCamControl } from "./useRTVIClientCamControl";
 
 export interface RTVIClientCamToggleProps {
@@ -40,7 +41,7 @@ export const RTVIClientCamToggle: React.FC<RTVIClientCamToggleProps> = ({
     const newEnabledState = !isCamEnabled;
     enableCam(newEnabledState);
     onCamEnabledChanged?.(newEnabledState);
-  }, [disabled, isCamEnabled, onCamEnabledChanged]);
+  }, [disabled, enableCam, isCamEnabled, onCamEnabledChanged]);
 
   return (
     <>

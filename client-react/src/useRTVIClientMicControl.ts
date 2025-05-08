@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+
 import { useRTVIClient } from "./useRTVIClient";
 
 /**
@@ -22,7 +23,7 @@ export const useRTVIClientMicControl = () => {
       setIsMicEnabled(enabled);
       client?.enableMic?.(enabled);
     },
-    [client, isMicEnabled]
+    [client]
   );
 
   return {

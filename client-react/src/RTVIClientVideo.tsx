@@ -5,6 +5,7 @@
  */
 
 import React, { forwardRef, useEffect, useRef } from "react";
+
 import useMergedRef from "./useMergedRef";
 import { useRTVIClientMediaTrack } from "./useRTVIClientMediaTrack";
 

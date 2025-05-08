@@ -1,4 +1,5 @@
 import React, { useCallback } from "react";
+
 import { useRTVIClientMicControl } from "./useRTVIClientMicControl";
 
 export interface RTVIClientMicToggleProps {
@@ -40,7 +41,7 @@ export const RTVIClientMicToggle: React.FC<RTVIClientMicToggleProps> = ({
     const newEnabledState = !isMicEnabled;
     enableMic(newEnabledState);
     onMicEnabledChanged?.(newEnabledState);
-  }, [disabled, isMicEnabled, onMicEnabledChanged]);
+  }, [disabled, enableMic, isMicEnabled, onMicEnabledChanged]);
 
   return (
     <>
