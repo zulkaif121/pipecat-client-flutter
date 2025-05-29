@@ -1,5 +1,5 @@
 {
-  "name": "@pipecat-ai/client-js",
+  "name": "@pipecat-ai/client-js-old",
   "version": "0.4.1",
   "license": "BSD-2-Clause",
   "main": "dist/index.js",
