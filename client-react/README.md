@@ -93,17 +93,58 @@ Creates a new `<video>` element that renders either the bot or local participant
 />
 ```
 
+### RTVIClientCamToggle
+
+This is a stateful headless component and exposes the user's camEnabled state and an `onClick` handler to toggle the state.
+
+#### Props
+
+- `onCamEnabledChanged(enabled: boolean)` (function, optional): Triggered when the user's camEnabled state changes
+- `disabled` (boolean, optional): Disables the cam toggle
+
+```jsx
+<RTVIClientCamToggle>
+  {({ disabled, isCamEnabled, onClick }) => (
+    <button disabled={disabled} onClick={onClick}>
+      {isCamEnabled ? "Turn off" : "Turn on"} camera
+    </button>
+  )}
+</RTVIClientCamToggle>
+```
+
+### RTVIClientMicToggle
+
+This is a stateful headless component and exposes the user's micEnabled state and an `onClick` handler to toggle the state.
+
+#### Props
+
+- `onMicEnabledChanged(enabled: boolean)` (function, optional): Triggered when the user's micEnabled state changes
+- `disabled` (boolean, optional): Disables the mic toggle
+
+```jsx
+<RTVIClientMicToggle>
+  {({ disabled, isMicEnabled, onClick }) => (
+    <button disabled={disabled} onClick={onClick}>
+      {isMicEnabled ? "Mute" : "Unmute"} microphone
+    </button>
+  )}
+</RTVIClientMicToggle>
+```
+
 ### VoiceVisualizer
 
 Renders a visual representation of audio input levels on a `<canvas>` element.
-The visualization consists of five vertical bars.
+The visualization consists of vertical bars.
 
 #### Props
 
 - `participantType` (string, required): The participant type to visualize audio for.
 - `backgroundColor` (string, optional): The background color of the canvas. Default: 'transparent'.
 - `barColor` (string, optional): The color of the audio level bars. Default: 'black'.
+- `barCount` (number, optional): The amount of bars to render. Default: 5
 - `barGap` (number, optional): The gap between bars in pixels. Default: 12.
+- `barLineCap` ('round' | 'square', optional): The line cap for each bar. Default: 'round'
+- `barOrigin` ('bottom' | 'center' | 'top', optional): The origin from where the bars grow to full height. Default: 'center'
 - `barWidth` (number, optional): The width of each bar in pixels. Default: 30.
 - `barMaxHeight` (number, optional): The maximum height at full volume of each bar in pixels. Default: 120.
 
@@ -154,6 +195,30 @@ function EventListener() {
       console.log("Transport state changed to", transportState);
     }, [])
   );
+}
+```
+
+### useRTVIClientCamControl
+
+Allows to control the user's camera state.
+
+```jsx
+import { useRTVIClientCamControl } from "@pipecat-ai/client-react";
+
+function CustomCamToggle() {
+  const { enableCam, isCamEnabled } = useRTVIClientCamControl();
+}
+```
+
+### useRTVIClientMicControl
+
+Allows to control the user's microphone state.
+
+```jsx
+import { useRTVIClientMicControl } from "@pipecat-ai/client-react";
+
+function CustomMicToggle() {
+  const { enableMic, isMicEnabled } = useRTVIClientMicControl();
 }
 ```
 

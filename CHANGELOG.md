@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-06-03
+
+- Updated transport wrapper to disallow calling `initDevices()` directly
+- `useRTVIClientMediaDevices()` now automatically initializes its device state
+- Added new hooks `useRTVIClientMicControl()` and `useRTVIClientCamControl()`
+- Added new headless components `RTVIClientMicToggle` and `RTVIClientCamToggle`
+- Added new props to `VoiceVisualizer` component: `barCount`, `barLineCap` and `barOrigin`
+- Updated dependencies per `npm audit`
+
 ## [0.3.5] - 2025-03-20
 
 - Added a getter to the client for getting the underlying transport. The transport that is returned is safe-guarded so that calls like `connect`/`disconnect` which should be called by the client are rejected.
