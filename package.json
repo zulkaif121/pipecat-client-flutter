@@ -3,8 +3,7 @@
   "name": "@pipecat-ai/client-web",
   "version": "0.4.1",
   "workspaces": [
-    "client-js/v1",
-    "client-js/v2",
+    "client-js",
     "client-react"
   ],
   "scripts": {

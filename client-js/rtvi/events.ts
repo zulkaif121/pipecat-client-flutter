@@ -81,17 +81,6 @@ export enum RTVIEvent {
   CamUpdated = "camUpdated",
   MicUpdated = "micUpdated",
   SpeakerUpdated = "speakerUpdated",
-
-  /**
-   *  All the following events are deprecated as part of V1 and
-   *  no longer exist in the latest RTVI protocol.
-   */
-  /** @deprecated Config control is no longer inherently supported */
-  // Config = "config",
-  // /** @deprecated Config control is no longer inherently supported */
-  // ConfigDescribe = "configDescribe",
-  // /** @deprecated Actions are no longer supported. Use server messages */
-  // ActionsAvailable = "actionsAvailable",
 }
 
 export type RTVIEvents = Partial<{
@@ -107,8 +96,10 @@ export type RTVIEvents = Partial<{
   error: (message: RTVIMessage) => void;
 
   /** server messaging */
-  serverMessage: (data: unknown) => void;
-  serverResponse: (data: unknown) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  serverMessage: (data: any) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  serverResponse: (data: any) => void;
   messageError: (message: RTVIMessage) => void;
 
   /** service events */
@@ -159,17 +150,6 @@ export type RTVIEvents = Partial<{
   camUpdated: (cam: MediaDeviceInfo) => void;
   micUpdated: (mic: MediaDeviceInfo) => void;
   speakerUpdated: (speaker: MediaDeviceInfo) => void;
-
-  /**
-   *  All the following events are deprecated as part of V1 and
-   *  no longer exist in the latest RTVI protocol.
-   */
-  // /** @deprecated Config control is no longer inherently supported */
-  // config: (config: RTVIClientConfigOption[]) => void;
-  // /** @deprecated Config control is no longer inherently supported */
-  // configUpdated: (config: RTVIClientConfigOption[]) => void;
-  // /** @deprecated Config control is no longer inherently supported */
-  // configDescribe: (configDescription: unknown) => void;
 }>;
 
 export type RTVIEventHandler<E extends RTVIEvent> = E extends keyof RTVIEvents

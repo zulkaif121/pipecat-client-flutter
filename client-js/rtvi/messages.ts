@@ -97,7 +97,8 @@ export type BotTTSTextData = {
 };
 
 export type ServerMessageData = {
-  data: unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any;
 };
 
 export type LLMSearchResult = {
