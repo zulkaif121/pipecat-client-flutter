@@ -46,16 +46,3 @@ export class BotNotReadyError extends RTVIError {
     );
   }
 }
-
-export class ConfigUpdateError extends RTVIError {
-  override readonly status = 400;
-  constructor(message?: string | undefined) {
-    super(message ?? "Unable to update configuration");
-  }
-}
-
-export class ActionEndpointNotSetError extends RTVIError {
-  constructor(message?: string | undefined) {
-    super(message ?? "Action endpoint is not set");
-  }
-}

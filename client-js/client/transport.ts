@@ -4,30 +4,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-import { PipecatClientOptions, PCIEventCallbacks } from "./client";
-import { PCIError } from "./errors";
-import { PCIMessage } from "./messages";
+import { RTVIError, RTVIMessage, TransportState } from "../rtvi";
+import { PipecatClientOptions, RTVIEventCallbacks } from "./client";
 import { ConnectionEndpoint } from "./rest_helpers";
-
-export type TransportState =
-  | "disconnected"
-  | "initializing"
-  | "initialized"
-  | "authenticating"
-  | "authenticated"
-  | "connecting"
-  | "connected"
-  | "ready"
-  | "disconnecting"
-  | "error";
-
-export type TransportFactoryFunction = () => Transport;
-
-export type Participant = {
-  id: string;
-  name: string;
-  local: boolean;
-};
 
 export type Tracks = {
   local: {
@@ -43,6 +22,8 @@ export type Tracks = {
     video?: MediaStreamTrack;
   };
 };
+
+export type TransportFactoryFunction = () => Transport;
 
 export type TransportConnectionParams = unknown;
 
@@ -116,8 +97,8 @@ export async function getTransportConnectionParams(
 
 export abstract class Transport {
   protected declare _options: PipecatClientOptions;
-  protected declare _onMessage: (ev: PCIMessage) => void;
-  protected declare _callbacks: PCIEventCallbacks;
+  protected declare _onMessage: (ev: RTVIMessage) => void;
+  protected declare _callbacks: RTVIEventCallbacks;
   protected declare _abortController: AbortController | undefined;
   protected _state: TransportState = "disconnected";
 
@@ -126,7 +107,7 @@ export abstract class Transport {
   /** called from PipecatClient constructor to wire up callbacks */
   abstract initialize(
     options: PipecatClientOptions,
-    messageHandler: (ev: PCIMessage) => void
+    messageHandler: (ev: RTVIMessage) => void
   ): void;
 
   /**
@@ -141,8 +122,9 @@ export abstract class Transport {
     let validatedParams = connectParams;
     try {
       validatedParams = this._validateConnectionParams(connectParams);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
-      throw new PCIError(
+      throw new RTVIError(
         `Invalid connection params: ${e.message}. Please check your connection params and try again.`
       );
     }
@@ -193,7 +175,7 @@ export abstract class Transport {
   abstract get isMicEnabled(): boolean;
   abstract get isSharingScreen(): boolean;
 
-  abstract sendMessage(message: PCIMessage): void;
+  abstract sendMessage(message: RTVIMessage): void;
 
   abstract tracks(): Tracks;
 }
@@ -233,7 +215,8 @@ export class TransportWrapper {
             };
           }
           // Forward other method calls
-          return (...args: any[]) => {
+          return (...args: unknown[]) => {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
             return (target[prop as keyof Transport] as Function)(...args);
           };
         }

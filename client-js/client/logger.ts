@@ -54,6 +54,6 @@ class Logger {
   }
 }
 
-export const logger = Logger.getInstance();
+export let logger = Logger.getInstance();
 
 export type ILogger = Logger;

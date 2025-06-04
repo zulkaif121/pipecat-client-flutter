@@ -1,11 +1,11 @@
 {
-  "name": "@pipecat-ai/client-js-old",
+  "name": "@pipecat-ai/client-js",
   "version": "0.4.1",
   "license": "BSD-2-Clause",
   "main": "dist/index.js",
   "module": "dist/index.module.js",
   "types": "dist/index.d.ts",
-  "source": "src/index.ts",
+  "source": "index.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pipecat-ai/pipecat-client-web.git"
@@ -16,9 +16,9 @@
     "README.md"
   ],
   "scripts": {
-    "build": "jest --silent && parcel build --no-cache",
+    "build": "jest --silent --passWithNoTests && parcel build --no-cache",
     "dev": "parcel watch",
-    "lint": "eslint src/ --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "test": "jest"
   },
   "jest": {

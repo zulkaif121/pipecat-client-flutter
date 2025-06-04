@@ -8,66 +8,51 @@ import EventEmitter from "events";
 import TypedEmitter from "typed-emitter";
 
 import packageJson from "../package.json";
-import { transportReady } from "./decorators";
-import * as PCIErrors from "./errors";
-import { PCIEvent, PCIEvents } from "./events";
-import { logger, LogLevel } from "./logger";
 import {
-  LLMContextMessage,
   AppendToContextResultData,
+  BotLLMSearchResponseData,
   BotLLMTextData,
   BotReadyData,
   BotTTSTextData,
   ErrorData,
+  LLMContextMessage,
   LLMFunctionCallData,
   LLMFunctionCallResult,
-  MessageDispatcher,
+  Participant,
   PipecatMetricsData,
-  PCIMessage,
-  PCIMessageType,
+  RTVIEvent,
+  RTVIEvents,
+  RTVIMessage,
+  RTVIMessageType,
   TranscriptData,
-} from "./messages";
+  TransportState,
+} from "../rtvi";
+import * as RTVIErrors from "../rtvi/errors";
+import { transportReady } from "./decorators";
+import { MessageDispatcher } from "./dispatcher";
+import { logger, LogLevel } from "./logger";
 import { ConnectionEndpoint, isConnectionEndpoint } from "./rest_helpers";
 import {
   getTransportConnectionParams,
-  Participant,
   Tracks,
   Transport,
   TransportConnectionParams,
-  TransportState,
   TransportWrapper,
 } from "./transport";
 
-export interface PipecatClientOptions {
-  /**
-   * Transport class for media streaming
-   */
-  transport: Transport;
+export type FunctionCallParams = {
+  functionName: string;
+  arguments: Record<string, unknown>;
+};
 
-  /**
-   * Optional callback methods for PCI events
-   */
-  callbacks?: PCIEventCallbacks;
+export type FunctionCallCallback = (
+  fn: FunctionCallParams
+) => Promise<LLMFunctionCallResult | void>;
 
-  /**
-   * Enable user mic input
-   *
-   * Default to true
-   */
-  enableMic?: boolean;
-
-  /**
-   * Enable user cam input
-   *
-   * Default to false
-   */
-  enableCam?: boolean;
-}
-
-export type PCIEventCallbacks = Partial<{
+export type RTVIEventCallbacks = Partial<{
   onConnected: () => void;
   onDisconnected: () => void;
-  onError: (message: PCIMessage) => void;
+  onError: (message: RTVIMessage) => void;
   onTransportStateChanged: (state: TransportState) => void;
 
   onBotConnected: (participant: Participant) => void;
@@ -76,7 +61,7 @@ export type PCIEventCallbacks = Partial<{
   onMetrics: (data: PipecatMetricsData) => void;
 
   onServerMessage: (data: unknown) => void;
-  onMessageError: (message: PCIMessage) => void;
+  onMessageError: (message: RTVIMessage) => void;
 
   onParticipantJoined: (participant: Participant) => void;
   onParticipantLeft: (participant: Participant) => void;
@@ -114,20 +99,39 @@ export type PCIEventCallbacks = Partial<{
   onBotTtsText: (data: BotTTSTextData) => void;
   onBotTtsStarted: () => void;
   onBotTtsStopped: () => void;
+
+  onBotLlmSearchResponse: (data: BotLLMSearchResponseData) => void;
 }>;
 
-abstract class PCIEventEmitter extends (EventEmitter as unknown as new () => TypedEmitter<PCIEvents>) {}
+export interface PipecatClientOptions {
+  /**
+   * Transport class for media streaming
+   */
+  transport: Transport;
 
-export type FunctionCallParams = {
-  functionName: string;
-  arguments: Record<string, unknown>;
-};
+  /**
+   * Optional callback methods for PCI events
+   */
+  callbacks?: RTVIEventCallbacks;
 
-export type FunctionCallCallback = (
-  fn: FunctionCallParams
-) => Promise<LLMFunctionCallResult | void>;
+  /**
+   * Enable user mic input
+   *
+   * Default to true
+   */
+  enableMic?: boolean;
 
-export class PipecatClient extends PCIEventEmitter {
+  /**
+   * Enable user cam input
+   *
+   * Default to false
+   */
+  enableCam?: boolean;
+}
+
+abstract class RTVIEventEmitter extends (EventEmitter as unknown as new () => TypedEmitter<RTVIEvents>) {}
+
+export class PipecatClient extends RTVIEventEmitter {
   protected _options: PipecatClientOptions;
   private _connectionTimeout: ReturnType<typeof setTimeout> | undefined;
   private _startResolve: ((value: unknown) => void) | undefined;
@@ -145,16 +149,17 @@ export class PipecatClient extends PCIEventEmitter {
 
     // Wrap transport callbacks with event triggers
     // This allows for either functional callbacks or .on / .off event listeners
-    const wrappedCallbacks: PCIEventCallbacks = {
+    const wrappedCallbacks: RTVIEventCallbacks = {
       ...options.callbacks,
-      onMessageError: (message: PCIMessage) => {
+      onMessageError: (message: RTVIMessage) => {
         options?.callbacks?.onMessageError?.(message);
-        this.emit(PCIEvent.MessageError, message);
+        this.emit(RTVIEvent.MessageError, message);
       },
-      onError: (message: PCIMessage) => {
+      onError: (message: RTVIMessage) => {
         options?.callbacks?.onError?.(message);
         try {
-          this.emit(PCIEvent.Error, message);
+          this.emit(RTVIEvent.Error, message);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (e) {
           logger.debug("Could not emit error", message);
         }
@@ -166,135 +171,135 @@ export class PipecatClient extends PCIEventEmitter {
       },
       onConnected: () => {
         options?.callbacks?.onConnected?.();
-        this.emit(PCIEvent.Connected);
+        this.emit(RTVIEvent.Connected);
       },
       onDisconnected: () => {
         options?.callbacks?.onDisconnected?.();
-        this.emit(PCIEvent.Disconnected);
+        this.emit(RTVIEvent.Disconnected);
       },
       onTransportStateChanged: (state: TransportState) => {
         options?.callbacks?.onTransportStateChanged?.(state);
-        this.emit(PCIEvent.TransportStateChanged, state);
+        this.emit(RTVIEvent.TransportStateChanged, state);
       },
       onParticipantJoined: (p) => {
         options?.callbacks?.onParticipantJoined?.(p);
-        this.emit(PCIEvent.ParticipantConnected, p);
+        this.emit(RTVIEvent.ParticipantConnected, p);
       },
       onParticipantLeft: (p) => {
         options?.callbacks?.onParticipantLeft?.(p);
-        this.emit(PCIEvent.ParticipantLeft, p);
+        this.emit(RTVIEvent.ParticipantLeft, p);
       },
       onTrackStarted: (track, p) => {
         options?.callbacks?.onTrackStarted?.(track, p);
-        this.emit(PCIEvent.TrackStarted, track, p);
+        this.emit(RTVIEvent.TrackStarted, track, p);
       },
       onTrackStopped: (track, p) => {
         options?.callbacks?.onTrackStopped?.(track, p);
-        this.emit(PCIEvent.TrackStopped, track, p);
+        this.emit(RTVIEvent.TrackStopped, track, p);
       },
       onScreenTrackStarted: (track, p) => {
         options?.callbacks?.onScreenTrackStarted?.(track, p);
-        this.emit(PCIEvent.ScreenTrackStarted, track, p);
+        this.emit(RTVIEvent.ScreenTrackStarted, track, p);
       },
       onScreenTrackStopped: (track, p) => {
         options?.callbacks?.onScreenTrackStopped?.(track, p);
-        this.emit(PCIEvent.ScreenTrackStopped, track, p);
+        this.emit(RTVIEvent.ScreenTrackStopped, track, p);
       },
       onScreenShareError: (errorMessage) => {
         options?.callbacks?.onScreenShareError?.(errorMessage);
-        this.emit(PCIEvent.ScreenShareError, errorMessage);
+        this.emit(RTVIEvent.ScreenShareError, errorMessage);
       },
       onAvailableCamsUpdated: (cams) => {
         options?.callbacks?.onAvailableCamsUpdated?.(cams);
-        this.emit(PCIEvent.AvailableCamsUpdated, cams);
+        this.emit(RTVIEvent.AvailableCamsUpdated, cams);
       },
       onAvailableMicsUpdated: (mics) => {
         options?.callbacks?.onAvailableMicsUpdated?.(mics);
-        this.emit(PCIEvent.AvailableMicsUpdated, mics);
+        this.emit(RTVIEvent.AvailableMicsUpdated, mics);
       },
       onAvailableSpeakersUpdated: (speakers) => {
         options?.callbacks?.onAvailableSpeakersUpdated?.(speakers);
-        this.emit(PCIEvent.AvailableSpeakersUpdated, speakers);
+        this.emit(RTVIEvent.AvailableSpeakersUpdated, speakers);
       },
       onCamUpdated: (cam) => {
         options?.callbacks?.onCamUpdated?.(cam);
-        this.emit(PCIEvent.CamUpdated, cam);
+        this.emit(RTVIEvent.CamUpdated, cam);
       },
       onMicUpdated: (mic) => {
         options?.callbacks?.onMicUpdated?.(mic);
-        this.emit(PCIEvent.MicUpdated, mic);
+        this.emit(RTVIEvent.MicUpdated, mic);
       },
       onSpeakerUpdated: (speaker) => {
         options?.callbacks?.onSpeakerUpdated?.(speaker);
-        this.emit(PCIEvent.SpeakerUpdated, speaker);
+        this.emit(RTVIEvent.SpeakerUpdated, speaker);
       },
       onBotConnected: (p) => {
         options?.callbacks?.onBotConnected?.(p);
-        this.emit(PCIEvent.BotConnected, p);
+        this.emit(RTVIEvent.BotConnected, p);
       },
       onBotReady: (botReadyData: BotReadyData) => {
         options?.callbacks?.onBotReady?.(botReadyData);
-        this.emit(PCIEvent.BotReady, botReadyData);
+        this.emit(RTVIEvent.BotReady, botReadyData);
       },
       onBotDisconnected: (p) => {
         options?.callbacks?.onBotDisconnected?.(p);
-        this.emit(PCIEvent.BotDisconnected, p);
+        this.emit(RTVIEvent.BotDisconnected, p);
       },
       onBotStartedSpeaking: () => {
         options?.callbacks?.onBotStartedSpeaking?.();
-        this.emit(PCIEvent.BotStartedSpeaking);
+        this.emit(RTVIEvent.BotStartedSpeaking);
       },
       onBotStoppedSpeaking: () => {
         options?.callbacks?.onBotStoppedSpeaking?.();
-        this.emit(PCIEvent.BotStoppedSpeaking);
+        this.emit(RTVIEvent.BotStoppedSpeaking);
       },
       onRemoteAudioLevel: (level, p) => {
         options?.callbacks?.onRemoteAudioLevel?.(level, p);
-        this.emit(PCIEvent.RemoteAudioLevel, level, p);
+        this.emit(RTVIEvent.RemoteAudioLevel, level, p);
       },
       onUserStartedSpeaking: () => {
         options?.callbacks?.onUserStartedSpeaking?.();
-        this.emit(PCIEvent.UserStartedSpeaking);
+        this.emit(RTVIEvent.UserStartedSpeaking);
       },
       onUserStoppedSpeaking: () => {
         options?.callbacks?.onUserStoppedSpeaking?.();
-        this.emit(PCIEvent.UserStoppedSpeaking);
+        this.emit(RTVIEvent.UserStoppedSpeaking);
       },
       onLocalAudioLevel: (level) => {
         options?.callbacks?.onLocalAudioLevel?.(level);
-        this.emit(PCIEvent.LocalAudioLevel, level);
+        this.emit(RTVIEvent.LocalAudioLevel, level);
       },
       onUserTranscript: (data) => {
         options?.callbacks?.onUserTranscript?.(data);
-        this.emit(PCIEvent.UserTranscript, data);
+        this.emit(RTVIEvent.UserTranscript, data);
       },
       onBotTranscript: (text) => {
         options?.callbacks?.onBotTranscript?.(text);
-        this.emit(PCIEvent.BotTranscript, text);
+        this.emit(RTVIEvent.BotTranscript, text);
       },
       onBotLlmText: (text) => {
         options?.callbacks?.onBotLlmText?.(text);
-        this.emit(PCIEvent.BotLlmText, text);
+        this.emit(RTVIEvent.BotLlmText, text);
       },
       onBotLlmStarted: () => {
         options?.callbacks?.onBotLlmStarted?.();
-        this.emit(PCIEvent.BotLlmStarted);
+        this.emit(RTVIEvent.BotLlmStarted);
       },
       onBotLlmStopped: () => {
         options?.callbacks?.onBotLlmStopped?.();
-        this.emit(PCIEvent.BotLlmStopped);
+        this.emit(RTVIEvent.BotLlmStopped);
       },
       onBotTtsText: (text) => {
         options?.callbacks?.onBotTtsText?.(text);
-        this.emit(PCIEvent.BotTtsText, text);
+        this.emit(RTVIEvent.BotTtsText, text);
       },
       onBotTtsStarted: () => {
         options?.callbacks?.onBotTtsStarted?.();
-        this.emit(PCIEvent.BotTtsStarted);
+        this.emit(RTVIEvent.BotTtsStarted);
       },
       onBotTtsStopped: () => {
         options?.callbacks?.onBotTtsStopped?.();
-        this.emit(PCIEvent.BotTtsStopped);
+        this.emit(RTVIEvent.BotTtsStopped);
       },
     };
 
@@ -339,7 +344,7 @@ export class PipecatClient extends PCIEventEmitter {
         this._transport.state
       )
     ) {
-      throw new PCIErrors.PCIError(
+      throw new RTVIErrors.RTVIError(
         "Voice client has already been started. Please call disconnect() before starting again."
       );
     }
@@ -391,7 +396,9 @@ export class PipecatClient extends PCIEventEmitter {
     this._transport.initialize(this._options, this.handleMessage.bind(this));
 
     // Create a new message dispatch queue for async message handling
-    this._messageDispatcher = new MessageDispatcher(this._transport);
+    this._messageDispatcher = new MessageDispatcher(
+      this._transport.sendMessage.bind(this._transport)
+    );
   }
 
   /**
@@ -483,7 +490,7 @@ export class PipecatClient extends PCIEventEmitter {
 
   /**
    * Directly send a message to the bot via the transport
-   * @param message - PCIMessage object to send
+   * @param message - RTVIMessage object to send
    */
   @transportReady
   public sendClientMessage(
@@ -511,7 +518,7 @@ export class PipecatClient extends PCIEventEmitter {
         content,
         runImmediately,
       } as LLMContextMessage,
-      PCIMessageType.APPEND_TO_CONTEXT
+      RTVIMessageType.APPEND_TO_CONTEXT
     );
     const responseData = response.data as AppendToContextResultData;
     return !!responseData.result;
@@ -523,82 +530,81 @@ export class PipecatClient extends PCIEventEmitter {
   @transportReady
   public disconnectBot(): void {
     this._transport.sendMessage(
-      new PCIMessage(PCIMessageType.DISCONNECT_BOT, {})
+      new RTVIMessage(RTVIMessageType.DISCONNECT_BOT, {})
     );
   }
 
-  protected handleMessage(ev: PCIMessage): void {
+  protected handleMessage(ev: RTVIMessage): void {
     logger.debug("[PCI Message]", ev);
 
     switch (ev.type) {
-      case PCIMessageType.BOT_READY:
+      case RTVIMessageType.BOT_READY:
         clearTimeout(this._connectionTimeout);
         this._startResolve?.(ev.data as BotReadyData);
         this._options.callbacks?.onBotReady?.(ev.data as BotReadyData);
         break;
-      case PCIMessageType.ERROR:
+      case RTVIMessageType.ERROR:
         this._options.callbacks?.onError?.(ev);
         break;
-      case PCIMessageType.SERVER_RESPONSE: {
+      case RTVIMessageType.SERVER_RESPONSE: {
         this._messageDispatcher.resolve(ev);
         break;
       }
-      case PCIMessageType.ERROR_RESPONSE: {
+      case RTVIMessageType.ERROR_RESPONSE: {
         const resp = this._messageDispatcher.reject(ev);
-        this._options.callbacks?.onMessageError?.(resp as PCIMessage);
+        this._options.callbacks?.onMessageError?.(resp as RTVIMessage);
         break;
       }
-      case PCIMessageType.USER_STARTED_SPEAKING:
+      case RTVIMessageType.USER_STARTED_SPEAKING:
         this._options.callbacks?.onUserStartedSpeaking?.();
         break;
-      case PCIMessageType.USER_STOPPED_SPEAKING:
+      case RTVIMessageType.USER_STOPPED_SPEAKING:
         this._options.callbacks?.onUserStoppedSpeaking?.();
         break;
-      case PCIMessageType.BOT_STARTED_SPEAKING:
+      case RTVIMessageType.BOT_STARTED_SPEAKING:
         this._options.callbacks?.onBotStartedSpeaking?.();
         break;
-      case PCIMessageType.BOT_STOPPED_SPEAKING:
+      case RTVIMessageType.BOT_STOPPED_SPEAKING:
         this._options.callbacks?.onBotStoppedSpeaking?.();
         break;
-      case PCIMessageType.USER_TRANSCRIPTION: {
+      case RTVIMessageType.USER_TRANSCRIPTION: {
         const TranscriptData = ev.data as TranscriptData;
         this._options.callbacks?.onUserTranscript?.(TranscriptData);
         break;
       }
-      case PCIMessageType.BOT_TRANSCRIPTION: {
+      case RTVIMessageType.BOT_TRANSCRIPTION: {
         this._options.callbacks?.onBotTranscript?.(ev.data as BotLLMTextData);
         break;
       }
-      case PCIMessageType.BOT_LLM_TEXT:
+      case RTVIMessageType.BOT_LLM_TEXT:
         this._options.callbacks?.onBotLlmText?.(ev.data as BotLLMTextData);
         break;
-      case PCIMessageType.BOT_LLM_STARTED:
+      case RTVIMessageType.BOT_LLM_STARTED:
         this._options.callbacks?.onBotLlmStarted?.();
         break;
-      case PCIMessageType.BOT_LLM_STOPPED:
+      case RTVIMessageType.BOT_LLM_STOPPED:
         this._options.callbacks?.onBotLlmStopped?.();
         break;
-      case PCIMessageType.BOT_TTS_TEXT:
+      case RTVIMessageType.BOT_TTS_TEXT:
         this._options.callbacks?.onBotTtsText?.(ev.data as BotTTSTextData);
         break;
-      case PCIMessageType.BOT_TTS_STARTED:
+      case RTVIMessageType.BOT_TTS_STARTED:
         this._options.callbacks?.onBotTtsStarted?.();
         break;
-      case PCIMessageType.BOT_TTS_STOPPED:
+      case RTVIMessageType.BOT_TTS_STOPPED:
         this._options.callbacks?.onBotTtsStopped?.();
         break;
-      case PCIMessageType.METRICS:
-        this.emit(PCIEvent.Metrics, ev.data as PipecatMetricsData);
+      case RTVIMessageType.METRICS:
+        this.emit(RTVIEvent.Metrics, ev.data as PipecatMetricsData);
         this._options.callbacks?.onMetrics?.(ev.data as PipecatMetricsData);
         break;
-      case PCIMessageType.APPEND_TO_CONTEXT_RESULT:
-      case PCIMessageType.SERVER_MESSAGE: {
+      case RTVIMessageType.APPEND_TO_CONTEXT_RESULT:
+      case RTVIMessageType.SERVER_MESSAGE: {
         this._options.callbacks?.onServerMessage?.(ev.data);
-        this.emit(PCIEvent.ServerMessage, ev.data);
+        this.emit(RTVIEvent.ServerMessage, ev.data);
         break;
       }
-      case PCIMessageType.LLM_FUNCTION_CALL: {
-        console.log("[Pipcat Client] LLM function call", ev.data);
+      case RTVIMessageType.LLM_FUNCTION_CALL: {
         const data = ev.data as LLMFunctionCallData;
         const fc = this._functionCallCallbacks[data.function_name];
         if (fc) {
@@ -608,7 +614,7 @@ export class PipecatClient extends PCIEventEmitter {
           };
           fc(params).then((result) => {
             this._transport.sendMessage(
-              new PCIMessage(PCIMessageType.LLM_FUNCTION_CALL_RESULT, {
+              new RTVIMessage(RTVIMessageType.LLM_FUNCTION_CALL_RESULT, {
                 function_name: data.function_name,
                 tool_call_id: data.tool_call_id,
                 arguments: data.args,
@@ -619,8 +625,14 @@ export class PipecatClient extends PCIEventEmitter {
         }
         break;
       }
+      case RTVIMessageType.BOT_LLM_SEARCH_RESPONSE: {
+        const data = ev.data as BotLLMSearchResponseData;
+        this._options.callbacks?.onBotLlmSearchResponse?.(data);
+        this.emit(RTVIEvent.BotLlmSearchResponse, data);
+        break;
+      }
       default: {
-        logger.debug("[Pipcat Client] Unrecognized message type", ev.type);
+        logger.debug("[Pipecat Client] Unrecognized message type", ev.type);
         break;
       }
     }

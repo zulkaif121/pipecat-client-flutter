@@ -5,8 +5,6 @@
  */
 
 export * from "./client";
-export * from "./errors";
-export * from "./events";
+export * from "./dispatcher";
 export * from "./logger";
-export * from "./messages";
 export * from "./transport";

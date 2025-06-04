@@ -4,23 +4,25 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+import { Participant, TransportState } from "./common_types";
 import {
+  BotLLMSearchResponseData,
   BotLLMTextData,
   BotReadyData,
   BotTTSTextData,
   LLMFunctionCallData,
   PipecatMetricsData,
-  PCIMessage,
+  RTVIMessage,
   TranscriptData,
 } from "./messages";
-import { Participant, TransportState } from "./transport";
 
-export enum PCIEvent {
+export enum RTVIEvent {
   /** local connection state events */
   Connected = "connected",
   Disconnected = "disconnected",
   TransportStateChanged = "transportStateChanged",
 
+  /** remote connection state events */
   BotConnected = "botConnected",
   BotReady = "botReady",
   BotDisconnected = "botDisconnected",
@@ -51,6 +53,8 @@ export enum PCIEvent {
 
   LLMFunctionCall = "llmFunctionCall",
 
+  BotLlmSearchResponse = "botLlmSearchResponse",
+
   // tts events
   BotTtsText = "botTtsText",
   BotTtsStarted = "botTtsStarted",
@@ -77,9 +81,20 @@ export enum PCIEvent {
   CamUpdated = "camUpdated",
   MicUpdated = "micUpdated",
   SpeakerUpdated = "speakerUpdated",
+
+  /**
+   *  All the following events are deprecated as part of V1 and
+   *  no longer exist in the latest RTVI protocol.
+   */
+  /** @deprecated Config control is no longer inherently supported */
+  // Config = "config",
+  // /** @deprecated Config control is no longer inherently supported */
+  // ConfigDescribe = "configDescribe",
+  // /** @deprecated Actions are no longer supported. Use server messages */
+  // ActionsAvailable = "actionsAvailable",
 }
 
-export type PCIEvents = Partial<{
+export type RTVIEvents = Partial<{
   /** local connection state events */
   connected: () => void;
   disconnected: () => void;
@@ -89,12 +104,12 @@ export type PCIEvents = Partial<{
   botConnected: (participant: Participant) => void;
   botReady: (botData: BotReadyData) => void;
   botDisconnected: (participant: Participant) => void;
-  error: (message: PCIMessage) => void;
+  error: (message: RTVIMessage) => void;
 
   /** server messaging */
-  serverMessage: (data: any) => void;
-  serverResponse: (data: any) => void;
-  messageError: (message: PCIMessage) => void;
+  serverMessage: (data: unknown) => void;
+  serverResponse: (data: unknown) => void;
+  messageError: (message: RTVIMessage) => void;
 
   /** service events */
   metrics: (data: PipecatMetricsData) => void;
@@ -115,6 +130,8 @@ export type PCIEvents = Partial<{
   botLlmStopped: () => void;
 
   llmFunctionCall: (func: LLMFunctionCallData) => void;
+
+  botLlmSearchResponse: (data: BotLLMSearchResponseData) => void;
 
   // tts events
   botTtsText: (data: BotTTSTextData) => void;
@@ -142,8 +159,19 @@ export type PCIEvents = Partial<{
   camUpdated: (cam: MediaDeviceInfo) => void;
   micUpdated: (mic: MediaDeviceInfo) => void;
   speakerUpdated: (speaker: MediaDeviceInfo) => void;
+
+  /**
+   *  All the following events are deprecated as part of V1 and
+   *  no longer exist in the latest RTVI protocol.
+   */
+  // /** @deprecated Config control is no longer inherently supported */
+  // config: (config: RTVIClientConfigOption[]) => void;
+  // /** @deprecated Config control is no longer inherently supported */
+  // configUpdated: (config: RTVIClientConfigOption[]) => void;
+  // /** @deprecated Config control is no longer inherently supported */
+  // configDescribe: (configDescription: unknown) => void;
 }>;
 
-export type PCIEventHandler<E extends PCIEvent> = E extends keyof PCIEvents
-  ? PCIEvents[E]
+export type RTVIEventHandler<E extends RTVIEvent> = E extends keyof RTVIEvents
+  ? RTVIEvents[E]
   : never;
