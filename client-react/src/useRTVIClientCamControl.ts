@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useRTVIClient } from "./useRTVIClient";
+import { useRTVIClientTransportState } from "./useRTVIClientTransportState";
 
 /**
  * Hook to control camera state
@@ -12,11 +13,18 @@ export const useRTVIClientCamControl = () => {
     client?.isCamEnabled ?? false
   );
 
+  const transportState = useRTVIClientTransportState();
+
   // Sync component state with client state initially
   useEffect(() => {
-    if (!client) return;
+    if (
+      !client ||
+      transportState !== "initialized" ||
+      typeof client.isCamEnabled !== "boolean"
+    )
+      return;
     setIsCamEnabled(client.isCamEnabled);
-  }, [client]);
+  }, [client, transportState]);
 
   const enableCam = useCallback(
     (enabled: boolean) => {
