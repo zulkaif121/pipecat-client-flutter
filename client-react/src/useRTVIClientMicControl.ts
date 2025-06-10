@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useRTVIClient } from "./useRTVIClient";
+import { useRTVIClientTransportState } from "./useRTVIClientTransportState";
 
 /**
  * Hook to control microphone state
@@ -12,11 +13,18 @@ export const useRTVIClientMicControl = () => {
     client?.isMicEnabled ?? false
   );
 
+  const transportState = useRTVIClientTransportState();
+
   // Sync component state with client state initially
   useEffect(() => {
-    if (!client) return;
+    if (
+      !client ||
+      transportState !== "initialized" ||
+      typeof client.isMicEnabled !== "boolean"
+    )
+      return;
     setIsMicEnabled(client.isMicEnabled);
-  }, [client]);
+  }, [client, transportState]);
 
   const enableMic = useCallback(
     (enabled: boolean) => {
