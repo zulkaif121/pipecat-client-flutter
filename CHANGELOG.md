@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2025-06-11
+
+- Fixed state intialization for `useRTVIClientCamControl()` and `useRTVIClientMicControl()`
+
 ## [0.4.0] - 2025-06-03
 
 - Updated transport wrapper to disallow calling `initDevices()` directly
