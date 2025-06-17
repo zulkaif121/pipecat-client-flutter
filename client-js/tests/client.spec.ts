@@ -99,7 +99,7 @@ describe("PipecatClient Methods", () => {
         args: { foo: "bar" },
       },
     };
-    client.transport.sendMessage(msg);
+    (client.transport as TransportStub).handleMessage(msg);
     expect(handled).toBe(true);
     expect(fooVal).toBe("bar");
   });

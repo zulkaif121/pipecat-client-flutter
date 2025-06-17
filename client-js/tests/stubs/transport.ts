@@ -142,8 +142,12 @@ export class TransportStub extends Transport {
   }
 
   public sendMessage(message: RTVIMessage) {
-    this._onMessage(message);
     return true;
+  }
+
+  // to simulate a message being received
+  public handleMessage(message: RTVIMessage): void {
+    this._onMessage(message);
   }
 
   public get state(): TransportState {

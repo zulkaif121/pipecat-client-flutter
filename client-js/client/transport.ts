@@ -6,6 +6,7 @@
 
 import { RTVIError, RTVIMessage, TransportState } from "../rtvi";
 import { PipecatClientOptions, RTVIEventCallbacks } from "./client";
+import { logger } from "./logger";
 import { ConnectionEndpoint } from "./rest_helpers";
 
 export type Tracks = {
@@ -45,8 +46,8 @@ export async function getTransportConnectionParams(
         }, cxnOpts.timeout);
       }
 
-      console.log(
-        `[PCI Transport] Fetching room and token from ${cxnOpts.endpoint}`
+      logger.debug(
+        `[PCI Transport] Fetching connection params from ${cxnOpts.endpoint}`
       );
       fetch(cxnOpts.endpoint, {
         method: "POST",
@@ -59,30 +60,19 @@ export async function getTransportConnectionParams(
         signal: abortController?.signal,
       })
         .then((res) => {
-          console.log(
+          logger.debug(
             `[PCI Transport] Received response from ${cxnOpts.endpoint}`
           );
           if (!res.ok) {
             throw new Error(
-              `Error fetching room and token: ${res.status} ${res.statusText}`
+              `Error fetching connection params: ${res.status} ${res.statusText}`
             );
           }
-          res.json().then((data) => {
-            if (data.room_url) {
-              data.url = data.room_url;
-              delete data.room_url;
-            }
-            if (!data.token) {
-              // Daily doesn't like token being in the map and undefined or null
-              delete data.token;
-            }
-            console.log("resolve", data);
-            resolve(data);
-          });
+          res.json().then((data) => resolve(data));
         })
         .catch((err) => {
           console.error(
-            `[PCI Transport] Error fetching room and token: ${err}`
+            `[PCI Transport] Error fetching connection params: ${err}`
           );
           reject(err);
         })

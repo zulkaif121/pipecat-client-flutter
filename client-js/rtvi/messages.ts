@@ -101,6 +101,11 @@ export type ServerMessageData = {
   data: any;
 };
 
+export type ClientMessageData = {
+  t: string;
+  d?: unknown;
+};
+
 export type LLMSearchResult = {
   text: string;
   confidence: number[];
@@ -134,9 +139,9 @@ export type LLMFunctionCallResultResponse = {
 };
 
 export type LLMContextMessage = {
-  role: "user" | "assistant" | string;
+  role: "user" | "assistant";
   content: unknown;
-  runImmediately?: boolean;
+  run_immediately?: boolean;
 };
 
 export type AppendToContextResultData = {

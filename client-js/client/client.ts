@@ -14,6 +14,7 @@ import {
   BotLLMTextData,
   BotReadyData,
   BotTTSTextData,
+  ClientMessageData,
   ErrorData,
   LLMContextMessage,
   LLMFunctionCallData,
@@ -390,7 +391,7 @@ export class PipecatClient extends RTVIEventEmitter {
    */
   public async disconnect(): Promise<void> {
     await this._transport.disconnect();
-    this._messageDispatcher.clearQueue();
+    this._messageDispatcher.disconnect();
   }
 
   private _initialize() {
@@ -490,15 +491,47 @@ export class PipecatClient extends RTVIEventEmitter {
   // ------ Messages
 
   /**
-   * Directly send a message to the bot via the transport
-   * @param message - RTVIMessage object to send
+   * Directly send a message to the bot via the transport.
+   * Do not await a response.
+   * @param msgType - a string representing the message type
+   * @param data - a dictionary of data to send with the message
    */
   @transportReady
-  public sendClientMessage(
+  public sendClientMessage(msgType: string, data?: unknown): void {
+    this._transport.sendMessage(
+      new RTVIMessage(RTVIMessageType.CLIENT_MESSAGE, {
+        t: msgType,
+        d: data,
+      } as ClientMessageData)
+    );
+  }
+
+  /**
+   * Directly send a message to the bot via the transport.
+   * Wait for and return the response.
+   * @param msgType - a string representing the message type
+   * @param data - a dictionary of data to send with the message
+   * @param timeout - optional timeout in milliseconds for the response
+   */
+  @transportReady
+  public async sendClientRequest(
+    msgType: string,
     data: unknown,
-    callback?: (data: unknown) => void
-  ): void {
-    this._messageDispatcher.dispatch(data).then(callback);
+    timeout?: number
+  ): Promise<unknown> {
+    return new Promise((resolve, reject) => {
+      const msgData: ClientMessageData = { t: msgType, d: data };
+      this._messageDispatcher
+        .dispatch(msgData, RTVIMessageType.CLIENT_MESSAGE, timeout)
+        .then((response) => {
+          logger.debug("[RTVI Client] Response received", response);
+          const data = response.data as ClientMessageData;
+          resolve(data.d);
+        })
+        .catch((e) => {
+          reject(e);
+        });
+    });
   }
 
   public registerFunctionCallHandler(
@@ -509,15 +542,12 @@ export class PipecatClient extends RTVIEventEmitter {
   }
 
   @transportReady
-  public async appendToUserContext(
-    content: unknown,
-    runImmediately: boolean = false
-  ) {
+  public async appendToContext(context: LLMContextMessage) {
     const response = await this._messageDispatcher.dispatch(
       {
-        role: "user",
-        content,
-        runImmediately,
+        role: context.role,
+        content: context.content,
+        run_immediately: context.run_immediately,
       } as LLMContextMessage,
       RTVIMessageType.APPEND_TO_CONTEXT
     );
