@@ -48,6 +48,7 @@ export class BotNotReadyError extends RTVIError {
 }
 
 export class UnsupportedFeatureError extends RTVIError {
+  readonly feature: string;
   constructor(feature: string, source?: string, message?: string) {
     let msg = `${feature} not supported${message ? `: ${message}` : ""}`;
     if (source) {
@@ -56,5 +57,6 @@ export class UnsupportedFeatureError extends RTVIError {
       }`;
     }
     super(msg);
+    this.feature = feature;
   }
 }

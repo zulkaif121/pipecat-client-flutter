@@ -79,7 +79,7 @@ export class TransportStub extends Transport {
           label: "rtvi-ai",
           id: "123",
           type: RTVIMessageType.BOT_READY,
-          data: {},
+          data: { version: "1.0.0" },
         } as RTVIMessage);
       })();
     });

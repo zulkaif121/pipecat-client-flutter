@@ -25,6 +25,7 @@ import {
   RTVIEvents,
   RTVIMessage,
   RTVIMessageType,
+  setAboutClient,
   TranscriptData,
   TransportState,
 } from "../rtvi";
@@ -32,14 +33,18 @@ import * as RTVIErrors from "../rtvi/errors";
 import { transportReady } from "./decorators";
 import { MessageDispatcher } from "./dispatcher";
 import { logger, LogLevel } from "./logger";
-import { ConnectionEndpoint, isConnectionEndpoint } from "./rest_helpers";
 import {
+  ConnectionEndpoint,
   getTransportConnectionParams,
+  isConnectionEndpoint,
+} from "./rest_helpers";
+import {
   Tracks,
   Transport,
   TransportConnectionParams,
   TransportWrapper,
 } from "./transport";
+import { learnAboutClient } from "./utils";
 
 export type FunctionCallParams = {
   functionName: string;
@@ -129,13 +134,19 @@ export interface PipecatClientOptions {
    * Default to false
    */
   enableCam?: boolean;
+
+  /**
+   * Enable screen sharing
+   *
+   * Default to false
+   */
+  enableScreenShare?: boolean;
 }
 
 abstract class RTVIEventEmitter extends (EventEmitter as unknown as new () => TypedEmitter<RTVIEvents>) {}
 
 export class PipecatClient extends RTVIEventEmitter {
   protected _options: PipecatClientOptions;
-  private _connectionTimeout: ReturnType<typeof setTimeout> | undefined;
   private _startResolve: ((value: unknown) => void) | undefined;
   protected _transport: Transport;
   protected _transportWrapper: TransportWrapper;
@@ -145,6 +156,8 @@ export class PipecatClient extends RTVIEventEmitter {
 
   constructor(options: PipecatClientOptions) {
     super();
+
+    setAboutClient(learnAboutClient());
 
     this._transport = options.transport;
     this._transportWrapper = new TransportWrapper(this._transport);
@@ -311,6 +324,7 @@ export class PipecatClient extends RTVIEventEmitter {
       callbacks: wrappedCallbacks,
       enableMic: options.enableMic ?? true,
       enableCam: options.enableCam ?? false,
+      enableScreenShare: options.enableScreenShare ?? false,
     };
 
     // Instantiate the transport class and bind message handler
@@ -335,8 +349,15 @@ export class PipecatClient extends RTVIEventEmitter {
   }
 
   /**
-   * Connect the voice client session with chosen transport
-   * Call async (await) to handle errors
+   * The `connect` function in TypeScript establishes a transport session and
+   * awaits a bot ready signal, handling various connection states and errors.
+   * @param {TransportConnectionParams | ConnectionEndpoint} [connectParams] -
+   * The `connectParams` parameter in the `connect` method can be either of type
+   * `TransportConnectionParams` or `ConnectionEndpoint`. It is used to provide
+   * connection parameters for establishing a transport session. If
+   * `connectParams` is of type `ConnectionEndpoint`, the method will go through
+   * an authentication process
+   * @returns The `connect` method returns a Promise that resolves to an unknown value.
    */
   public async connect(
     connectParams?: TransportConnectionParams | ConnectionEndpoint
@@ -364,12 +385,14 @@ export class PipecatClient extends RTVIEventEmitter {
           let cxnParams: TransportConnectionParams;
           if (connectParams) {
             if (isConnectionEndpoint(connectParams)) {
+              this._transport.state = "authenticating";
               this._abortController = new AbortController();
               cxnParams = await getTransportConnectionParams(
                 connectParams as ConnectionEndpoint,
                 this._abortController
               );
               if (this._abortController?.signal.aborted) return;
+              this._transport.state = "authenticated";
             } else {
               cxnParams = connectParams as TransportConnectionParams;
             }
@@ -394,6 +417,10 @@ export class PipecatClient extends RTVIEventEmitter {
     this._messageDispatcher.disconnect();
   }
 
+  /**
+   * The _initialize function performs internal set up of the transport and
+   * message dispatcher.
+   */
   private _initialize() {
     this._transport.initialize(this._options, this.handleMessage.bind(this));
 
@@ -569,11 +596,18 @@ export class PipecatClient extends RTVIEventEmitter {
     logger.debug("[RTVI Message]", ev);
 
     switch (ev.type) {
-      case RTVIMessageType.BOT_READY:
-        clearTimeout(this._connectionTimeout);
+      case RTVIMessageType.BOT_READY: {
+        const data = ev.data as BotReadyData;
+        const botVersion = data.version.split(".").map(Number);
+        if (botVersion[0] < 1) {
+          logger.warn(
+            "[Pipecat Client] Bot version is less than 1.0.0, which may not be compatible with this client."
+          );
+        }
         this._startResolve?.(ev.data as BotReadyData);
         this._options.callbacks?.onBotReady?.(ev.data as BotReadyData);
         break;
+      }
       case RTVIMessageType.ERROR:
         this._options.callbacks?.onError?.(ev);
         break;
@@ -626,8 +660,8 @@ export class PipecatClient extends RTVIEventEmitter {
         this._options.callbacks?.onBotTtsStopped?.();
         break;
       case RTVIMessageType.METRICS:
-        this.emit(RTVIEvent.Metrics, ev.data as PipecatMetricsData);
         this._options.callbacks?.onMetrics?.(ev.data as PipecatMetricsData);
+        this.emit(RTVIEvent.Metrics, ev.data as PipecatMetricsData);
         break;
       case RTVIMessageType.APPEND_TO_CONTEXT_RESULT:
       case RTVIMessageType.SERVER_MESSAGE: {

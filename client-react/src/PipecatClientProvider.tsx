@@ -8,11 +8,16 @@ import {
   PipecatClient,
   RTVIEvent,
   RTVIEventHandler,
+  setAboutClient,
 } from "@pipecat-ai/client-js";
 import { createStore } from "jotai";
 import { Provider as JotaiProvider } from "jotai/react";
 import React, { createContext, useCallback, useEffect, useRef } from "react";
 
+import {
+  name as packageName,
+  version as packageVersion,
+} from "../package.json";
 import { RTVIEventContext } from "./RTVIEventContext";
 
 export interface Props {
@@ -33,6 +38,13 @@ type EventHandlersMap = {
 export const PipecatClientProvider: React.FC<
   React.PropsWithChildren<Props>
 > = ({ children, client, jotaiStore = defaultStore }) => {
+  useEffect(() => {
+    setAboutClient({
+      library: packageName,
+      library_version: packageVersion,
+    });
+  }, []);
+
   const eventHandlersMap = useRef<EventHandlersMap>({});
 
   useEffect(() => {

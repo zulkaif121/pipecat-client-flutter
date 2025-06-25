@@ -23,5 +23,5 @@
 
     "experimentalDecorators": true
   },
-  "include": ["client", "rtvi"]
+  "include": ["client/**/*", "rtvi/**/*"]
 }

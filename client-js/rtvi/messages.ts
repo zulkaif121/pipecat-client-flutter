@@ -6,6 +6,12 @@
 
 import { v4 as uuidv4 } from "uuid";
 
+import {
+  name as packageName,
+  version as packageVersion,
+} from "../package.json";
+
+export const RTVI_PROTOCOL_VERSION = "1.0.0";
 export const RTVI_MESSAGE_LABEL = "rtvi-ai";
 
 /**
@@ -63,6 +69,29 @@ export enum RTVIMessageType {
 
 export type BotReadyData = {
   version: string;
+  about?: unknown; // Optional about data from the bot
+};
+
+type PlatformDetailsValue = undefined | string | number | boolean;
+type NestedPlatformDetails =
+  | PlatformDetailsValue
+  | Record<string, PlatformDetailsValue>;
+
+// This is an interface so that different client libraries can provide their own
+// implementation of the about data, e.g., with more platform-specific details.
+// The client library should call `setAboutClient` to set this data before sending
+// the `client-ready` message.
+export interface AboutClientData {
+  library: string; // Library name, e.g., "@pipecat-ai/client-js"
+  library_version?: string; // Library version, e.g., "1.0.0"
+  platform?: string; // Platform name, e.g., "Android"
+  platform_version?: string; // Platform version, e.g., "14.0"
+  platform_details?: Record<string, NestedPlatformDetails>; // Optional platform details, e.g., browser info
+}
+
+export type ClientReadyData = {
+  version: string;
+  about: AboutClientData; // Information about the client library
 };
 
 export type ErrorData = {
@@ -150,6 +179,20 @@ export type AppendToContextResultData = {
 
 // ----- Message Classes
 
+let _aboutClient: AboutClientData | undefined;
+export function setAboutClient(about: AboutClientData) {
+  // allow for partial updates to the about data
+  // this allows the client to set the about data at any time
+  // before sending the `client-ready` message and not worry about
+  // overwriting existing data
+  if (_aboutClient) {
+    _aboutClient = { ..._aboutClient, ...about };
+  } else {
+    // if no about data is set, set it to the provided value
+    _aboutClient = about;
+  }
+}
+
 export class RTVIMessage {
   id: string;
   label: string = RTVI_MESSAGE_LABEL;
@@ -164,7 +207,13 @@ export class RTVIMessage {
 
   // Outbound message types
   static clientReady(): RTVIMessage {
-    return new RTVIMessage(RTVIMessageType.CLIENT_READY, {});
+    return new RTVIMessage(RTVIMessageType.CLIENT_READY, {
+      version: RTVI_PROTOCOL_VERSION,
+      about: _aboutClient || {
+        library: packageName,
+        library_version: packageVersion,
+      },
+    });
   }
 
   static disconnectBot(): RTVIMessage {
