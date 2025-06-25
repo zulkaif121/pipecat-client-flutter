@@ -6,8 +6,6 @@
 
 import { RTVIError, RTVIMessage, TransportState } from "../rtvi";
 import { PipecatClientOptions, RTVIEventCallbacks } from "./client";
-import { logger } from "./logger";
-import { ConnectionEndpoint } from "./rest_helpers";
 
 export type Tracks = {
   local: {
@@ -27,63 +25,6 @@ export type Tracks = {
 export type TransportFactoryFunction = () => Transport;
 
 export type TransportConnectionParams = unknown;
-
-export async function getTransportConnectionParams(
-  cxnOpts: ConnectionEndpoint,
-  abortController?: AbortController
-): Promise<TransportConnectionParams> {
-  if (!abortController) {
-    abortController = new AbortController();
-  }
-  let handshakeTimeout: ReturnType<typeof setTimeout> | undefined;
-
-  return new Promise((resolve, reject) => {
-    (async () => {
-      if (cxnOpts.timeout) {
-        handshakeTimeout = setTimeout(async () => {
-          abortController.abort();
-          reject(new Error("Timed out"));
-        }, cxnOpts.timeout);
-      }
-
-      logger.debug(
-        `[PCI Transport] Fetching connection params from ${cxnOpts.endpoint}`
-      );
-      fetch(cxnOpts.endpoint, {
-        method: "POST",
-        mode: "cors",
-        headers: new Headers({
-          "Content-Type": "application/json",
-          ...Object.fromEntries((cxnOpts.headers ?? new Headers()).entries()),
-        }),
-        body: JSON.stringify(cxnOpts.requestData),
-        signal: abortController?.signal,
-      })
-        .then((res) => {
-          logger.debug(
-            `[PCI Transport] Received response from ${cxnOpts.endpoint}`
-          );
-          if (!res.ok) {
-            throw new Error(
-              `Error fetching connection params: ${res.status} ${res.statusText}`
-            );
-          }
-          res.json().then((data) => resolve(data));
-        })
-        .catch((err) => {
-          console.error(
-            `[PCI Transport] Error fetching connection params: ${err}`
-          );
-          reject(err);
-        })
-        .finally(() => {
-          if (handshakeTimeout) {
-            clearTimeout(handshakeTimeout);
-          }
-        });
-    })();
-  });
-}
 
 export abstract class Transport {
   protected declare _options: PipecatClientOptions;
