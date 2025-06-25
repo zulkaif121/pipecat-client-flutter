@@ -22,8 +22,6 @@ export type Tracks = {
   };
 };
 
-export type TransportFactoryFunction = () => Transport;
-
 export type TransportConnectionParams = unknown;
 
 export abstract class Transport {
@@ -48,6 +46,13 @@ export abstract class Transport {
    */
   abstract initDevices(): Promise<void>;
 
+  /**
+   * Establishes a connection with the remote server. This is the main entry
+   * point for the transport to start sending and receiving media and messages.
+   * This is called from PipecatClient.connect() and should not be called directly.
+   * @param connectParams - This type will ultimately be defned by the transport
+   * implementation. It is used to pass connection parameters to the transport.
+   */
   connect(connectParams?: TransportConnectionParams): Promise<void> {
     this._abortController = new AbortController();
     let validatedParams = connectParams;
@@ -64,12 +69,6 @@ export abstract class Transport {
 
   abstract _validateConnectionParams(connectParams?: unknown): unknown;
 
-  /**
-   * Establishes a connection with the remote server. This is the main entry
-   * point for the transport to start sending and receiving media and messages.
-   * This is called from PipecatClient.connect() and should not be called directly.
-   * @param abortController
-   */
   abstract _connect(connectParams?: TransportConnectionParams): Promise<void>;
   /**
    * Disconnects the transport from the remote server. This is called from
@@ -123,7 +122,7 @@ export class TransportWrapper {
           let errMsg;
           switch (String(prop)) {
             // Disable methods that modify the lifecycle of the call. These operations
-            // should be performed via the PCI client in order to keep state in sync.
+            // should be performed via the Pipecat client in order to keep state in sync.
             case "initialize":
               errMsg = `Direct calls to initialize() are disabled and used internally by the PipecatClient.`;
               break;

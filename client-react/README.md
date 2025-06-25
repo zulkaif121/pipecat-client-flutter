@@ -53,7 +53,7 @@ The root component for providing Pipecat client context to your application.
 - `client` (PipecatClient, required): A singleton instance of PipecatClient.
 
 ```jsx
-<PipecatClientProvider client={rtviClient}>
+<PipecatClientProvider client={pcClient}>
   {/* Child components */}
 </PipecatClientProvider>
 ```
@@ -168,13 +168,13 @@ Provides access to the `PipecatClient` instance originally passed to [`PipecatCl
 import { usePipecatClient } from "@pipecat-ai/client-react";
 
 function MyComponent() {
-  const rtviClient = usePipecatClient();
+  const pcClient = usePipecatClient();
 }
 ```
 
 ### useRTVIClientEvent
 
-Allows subscribing to RTVI client events.
+Allows subscribing to RTVI events.
 It is advised to wrap handlers with `useCallback`.
 
 #### Arguments

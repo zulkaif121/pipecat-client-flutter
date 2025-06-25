@@ -141,6 +141,7 @@ export class TransportStub extends Transport {
     return this._mockState.isSharingScreen;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public sendMessage(message: RTVIMessage) {
     return true;
   }

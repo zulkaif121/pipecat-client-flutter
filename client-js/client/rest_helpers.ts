@@ -39,7 +39,7 @@ export async function getTransportConnectionParams(
       }
 
       logger.debug(
-        `[PCI Transport] Fetching connection params from ${cxnOpts.endpoint}`
+        `[Pipecat Client] Fetching connection params from ${cxnOpts.endpoint}`
       );
       fetch(cxnOpts.endpoint, {
         method: "POST",
@@ -53,7 +53,7 @@ export async function getTransportConnectionParams(
       })
         .then((res) => {
           logger.debug(
-            `[PCI Transport] Received response from ${cxnOpts.endpoint}`,
+            `[Pipecat Client] Received response from ${cxnOpts.endpoint}`,
             res
           );
           if (!res.ok) {
@@ -63,7 +63,7 @@ export async function getTransportConnectionParams(
         })
         .catch((err) => {
           logger.error(
-            `[PCI Transport] Error fetching connection params: ${err}`
+            `[Pipecat Client] Error fetching connection params: ${err}`
           );
           if (err instanceof Response) {
             err.json().then((errResp) => {

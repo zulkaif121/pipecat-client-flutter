@@ -33,7 +33,7 @@ export enum RTVIMessageType {
    */
   BOT_READY = "bot-ready", // Bot is connected and ready to receive messages
   ERROR = "error", // Bot initialization error
-  METRICS = "metrics", // PCI reporting metrics
+  METRICS = "metrics", // Bot reporting metrics
   SERVER_MESSAGE = "server-message", // Custom server-to-client message
   SERVER_RESPONSE = "server-response", // Server response to client message
   ERROR_RESPONSE = "error-response", // Error message in response to an outbound message

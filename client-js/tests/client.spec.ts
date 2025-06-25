@@ -63,7 +63,7 @@ describe("PipecatClient Methods", () => {
     expect(stateChanges).toEqual(["initializing", "initialized"]);
   });
 
-  test("Connection params should should be nullable", async () => {
+  test("Connection params should be nullable", async () => {
     const stateChanges: string[] = [];
     const mockStateChangeHandler = (newState: string) => {
       stateChanges.push(newState);

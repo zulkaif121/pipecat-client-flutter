@@ -349,8 +349,8 @@ export class PipecatClient extends RTVIEventEmitter {
   }
 
   /**
-   * The `connect` function in TypeScript establishes a transport session and
-   * awaits a bot ready signal, handling various connection states and errors.
+   * The `connect` function establishes a transport session and awaits a
+   * bot-ready signal, handling various connection states and errors.
    * @param {TransportConnectionParams | ConnectionEndpoint} [connectParams] -
    * The `connectParams` parameter in the `connect` method can be either of type
    * `TransportConnectionParams` or `ConnectionEndpoint`. It is used to provide
@@ -545,20 +545,15 @@ export class PipecatClient extends RTVIEventEmitter {
     msgType: string,
     data: unknown,
     timeout?: number
-  ): Promise<unknown> {
-    return new Promise((resolve, reject) => {
-      const msgData: ClientMessageData = { t: msgType, d: data };
-      this._messageDispatcher
-        .dispatch(msgData, RTVIMessageType.CLIENT_MESSAGE, timeout)
-        .then((response) => {
-          logger.debug("[RTVI Client] Response received", response);
-          const data = response.data as ClientMessageData;
-          resolve(data.d);
-        })
-        .catch((e) => {
-          reject(e);
-        });
-    });
+  ) {
+    const msgData: ClientMessageData = { t: msgType, d: data };
+    const response = await this._messageDispatcher.dispatch(
+      msgData,
+      RTVIMessageType.CLIENT_MESSAGE,
+      timeout
+    );
+    const ret_data = response.data as ClientMessageData;
+    return ret_data.d;
   }
 
   public registerFunctionCallHandler(
@@ -598,7 +593,10 @@ export class PipecatClient extends RTVIEventEmitter {
     switch (ev.type) {
       case RTVIMessageType.BOT_READY: {
         const data = ev.data as BotReadyData;
-        const botVersion = data.version.split(".").map(Number);
+        const botVersion = data.version
+          ? data.version.split(".").map(Number)
+          : [0, 0, 0];
+        logger.debug(`[Pipecat Client] Bot is ready. Version: ${data.version}`);
         if (botVersion[0] < 1) {
           logger.warn(
             "[Pipecat Client] Bot version is less than 1.0.0, which may not be compatible with this client."
