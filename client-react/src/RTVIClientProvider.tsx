@@ -9,6 +9,8 @@ import { createStore } from "jotai";
 import { Provider as JotaiProvider } from "jotai/react";
 import React, { createContext, useCallback, useEffect, useRef } from "react";
 
+import { RTVIEventContext } from "./RTVIEventContext";
+
 export interface Props {
   client: RTVIClient;
   jotaiStore?: React.ComponentProps<typeof JotaiProvider>["store"];
@@ -96,19 +98,11 @@ export const RTVIClientProvider: React.FC<React.PropsWithChildren<Props>> = ({
   return (
     <JotaiProvider store={jotaiStore}>
       <RTVIClientContext.Provider value={{ client }}>
-        <EventContext.Provider value={{ on, off }}>
+        <RTVIEventContext.Provider value={{ on, off }}>
           {children}
-        </EventContext.Provider>
+        </RTVIEventContext.Provider>
       </RTVIClientContext.Provider>
     </JotaiProvider>
   );
 };
 RTVIClientProvider.displayName = "RTVIClientProvider";
-
-export const EventContext = createContext<{
-  on: <E extends RTVIEvent>(event: E, handler: RTVIEventHandler<E>) => void;
-  off: <E extends RTVIEvent>(event: E, handler: RTVIEventHandler<E>) => void;
-}>({
-  on: () => {},
-  off: () => {},
-});

@@ -7,13 +7,13 @@
 import { RTVIEvent, RTVIEventHandler } from "@pipecat-ai/client-js";
 import { useContext, useEffect } from "react";
 
-import { EventContext } from "./RTVIClientProvider";
+import { RTVIEventContext } from "./RTVIEventContext";
 
 export const useRTVIClientEvent = <E extends RTVIEvent>(
   event: E,
   handler: RTVIEventHandler<E>
 ) => {
-  const { on, off } = useContext(EventContext);
+  const { on, off } = useContext(RTVIEventContext);
 
   useEffect(() => {
     on(event, handler);
