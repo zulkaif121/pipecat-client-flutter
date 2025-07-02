@@ -18,9 +18,9 @@ const defaultStore = createStore();
 
 export const RTVIClientContext = createContext<{ client?: RTVIClient }>({});
 
-type EventHandlersMap = Partial<{
-  [E in RTVIEvent]: Map<number, RTVIEventHandler<E>>;
-}>;
+type EventHandlersMap = {
+  [E in RTVIEvent]?: Set<RTVIEventHandler<E>>;
+};
 
 export const RTVIClientProvider: React.FC<React.PropsWithChildren<Props>> = ({
   children,
@@ -29,64 +29,69 @@ export const RTVIClientProvider: React.FC<React.PropsWithChildren<Props>> = ({
 }) => {
   const eventHandlersMap = useRef<EventHandlersMap>({});
 
-  const handleEvent = useCallback(
-    <E extends RTVIEvent>(
-      event: E,
-      ...payload: Parameters<RTVIEventHandler<E>>
-    ) => {
-      const handlers = eventHandlersMap.current[event];
-      if (!handlers) return;
-      Array.from(handlers.values()).forEach((h) => {
-        (h as (...args: Parameters<RTVIEventHandler<E>>) => void)(...payload);
+  useEffect(() => {
+    if (!client) return;
+
+    const allEvents = Object.keys(RTVIEvent).filter((key) =>
+      isNaN(Number(key))
+    ) as RTVIEvent[];
+
+    const allHandlers: Partial<
+      Record<
+        RTVIEvent,
+        (
+          ...args: Parameters<Exclude<RTVIEventHandler<RTVIEvent>, undefined>>
+        ) => void
+      >
+    > = {};
+
+    allEvents.forEach((event) => {
+      type E = typeof event;
+      type Handler = Exclude<RTVIEventHandler<E>, undefined>; // Remove undefined
+      type Payload = Parameters<Handler>; // Will always be a tuple
+
+      const handler = (...payload: Payload) => {
+        const handlers = eventHandlersMap.current[event] as
+          | Set<Handler>
+          | undefined;
+        if (!handlers) return;
+        handlers.forEach((h) => {
+          (
+            h as (
+              ...args: Parameters<Exclude<RTVIEventHandler<E>, undefined>>
+            ) => void
+          )(...payload);
+        });
+      };
+
+      allHandlers[event] = handler;
+
+      client.on(event, handler);
+    });
+
+    return () => {
+      allEvents.forEach((event) => {
+        client.off(event, allHandlers[event]);
       });
+    };
+  }, [client]);
+
+  const on = useCallback(
+    <E extends RTVIEvent>(event: E, handler: RTVIEventHandler<E>) => {
+      if (!eventHandlersMap.current[event]) {
+        eventHandlersMap.current[event] = new Set();
+      }
+      eventHandlersMap.current[event]!.add(handler);
     },
     []
   );
 
-  const registeredEvents = useRef<RTVIEvent[]>([]);
-
-  useEffect(
-    function initEventHandlers() {
-      if (!client) return;
-      const events = Object.keys(eventHandlersMap.current ?? {}) as RTVIEvent[];
-      const wrappedHandlers = events.map((event) => {
-        // @ts-expect-error RTVIEventHandler type is not generic
-        return (...payload: Parameters<RTVIEventHandler<typeof event>>) =>
-          handleEvent(event, ...payload);
-      });
-      events.forEach((event, i) => {
-        if (registeredEvents.current.includes(event)) return;
-        registeredEvents.current.push(event);
-        client.on(event as RTVIEvent, wrappedHandlers[i]);
-      });
+  const off = useCallback(
+    <E extends RTVIEvent>(event: E, handler: RTVIEventHandler<E>) => {
+      eventHandlersMap.current[event]?.delete(handler);
     },
-    [client, handleEvent]
+    []
   );
-
-  const on = useCallback(
-    <E extends RTVIEvent>(
-      event: E,
-      handler: RTVIEventHandler<E>,
-      key: number
-    ) => {
-      if (!client) return;
-      if (!eventHandlersMap.current[event]) {
-        eventHandlersMap.current[event] = new Map();
-      }
-      eventHandlersMap.current[event].set(key, handler);
-      if (registeredEvents.current.includes(event)) return;
-      registeredEvents.current.push(event);
-      const wrappedHandler = (...payload: Parameters<RTVIEventHandler<E>>) =>
-        handleEvent(event, ...payload);
-      client.on(event as RTVIEvent, wrappedHandler);
-    },
-    [client, handleEvent]
-  );
-
-  const off = useCallback(<E extends RTVIEvent>(event: E, key: number) => {
-    if (!eventHandlersMap.current[event]) return;
-    eventHandlersMap.current[event].delete(key);
-  }, []);
 
   return (
     <JotaiProvider store={jotaiStore}>
@@ -101,12 +106,8 @@ export const RTVIClientProvider: React.FC<React.PropsWithChildren<Props>> = ({
 RTVIClientProvider.displayName = "RTVIClientProvider";
 
 export const EventContext = createContext<{
-  on: <E extends RTVIEvent>(
-    event: E,
-    handler: RTVIEventHandler<E>,
-    key: number
-  ) => void;
-  off: <E extends RTVIEvent>(event: E, key: number) => void;
+  on: <E extends RTVIEvent>(event: E, handler: RTVIEventHandler<E>) => void;
+  off: <E extends RTVIEvent>(event: E, handler: RTVIEventHandler<E>) => void;
 }>({
   on: () => {},
   off: () => {},

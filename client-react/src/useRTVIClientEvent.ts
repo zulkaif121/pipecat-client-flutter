@@ -9,11 +9,6 @@ import { useContext, useEffect } from "react";
 
 import { EventContext } from "./RTVIClientProvider";
 
-let keyCounter = 0;
-const uniqueKey = () => {
-  return keyCounter++;
-};
-
 export const useRTVIClientEvent = <E extends RTVIEvent>(
   event: E,
   handler: RTVIEventHandler<E>
@@ -21,10 +16,9 @@ export const useRTVIClientEvent = <E extends RTVIEvent>(
   const { on, off } = useContext(EventContext);
 
   useEffect(() => {
-    const key = uniqueKey();
-    on(event, handler, key);
+    on(event, handler);
     return () => {
-      off(event, key);
+      off(event, handler);
     };
   }, [event, handler, on, off]);
 };
