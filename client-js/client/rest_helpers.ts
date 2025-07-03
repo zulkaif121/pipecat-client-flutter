@@ -2,10 +2,18 @@ import * as RTVIErrors from "../rtvi/errors";
 import { logger } from "./logger";
 import { TransportConnectionParams } from "./transport";
 
+type Serializable =
+  | string
+  | number
+  | boolean
+  | null
+  | Serializable[]
+  | { [key: number | string]: Serializable };
+
 export interface ConnectionEndpoint {
   endpoint: string;
   headers?: Headers;
-  requestData?: object;
+  requestData?: Serializable;
   timeout?: number;
 }
 
