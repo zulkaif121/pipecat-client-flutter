@@ -34,8 +34,8 @@ export const RTVIClientProvider: React.FC<React.PropsWithChildren<Props>> = ({
   useEffect(() => {
     if (!client) return;
 
-    const allEvents = Object.keys(RTVIEvent).filter((key) =>
-      isNaN(Number(key))
+    const allEvents = Object.values(RTVIEvent).filter((value) =>
+      isNaN(Number(value))
     ) as RTVIEvent[];
 
     const allHandlers: Partial<
