@@ -5,21 +5,20 @@
  */
 
 import { RTVIEvent, RTVIEventHandler } from "@pipecat-ai/client-js";
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
 
-import { useRTVIClient } from "./useRTVIClient";
+import { RTVIEventContext } from "./RTVIEventContext";
 
 export const useRTVIClientEvent = <E extends RTVIEvent>(
   event: E,
   handler: RTVIEventHandler<E>
 ) => {
-  const client = useRTVIClient();
+  const { on, off } = useContext(RTVIEventContext);
 
   useEffect(() => {
-    if (!client) return;
-    client.on(event, handler);
+    on(event, handler);
     return () => {
-      client.off(event, handler);
+      off(event, handler);
     };
-  }, [event, handler, client]);
+  }, [event, handler, on, off]);
 };
