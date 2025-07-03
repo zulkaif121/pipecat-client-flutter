@@ -121,4 +121,4 @@ export const PipecatClientProvider: React.FC<
     </JotaiProvider>
   );
 };
-PipecatClientContext.displayName = "PipecatClientContext";
+PipecatClientProvider.displayName = "PipecatClientProvider";
