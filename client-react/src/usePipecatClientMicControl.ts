@@ -1,41 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+/**
+ * Copyright (c) 2024, Daily.
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
 
-import { usePipecatClient } from "./usePipecatClient";
-import { usePipecatClientTransportState } from "./usePipecatClientTransportState";
+import { useContext } from "react";
+
+import { PipecatClientMicStateContext } from "./PipecatClientState";
 
 /**
  * Hook to control microphone state
  */
-export const usePipecatClientMicControl = () => {
-  const client = usePipecatClient();
-
-  const [isMicEnabled, setIsMicEnabled] = useState(
-    client?.isMicEnabled ?? false
-  );
-
-  const transportState = usePipecatClientTransportState();
-
-  // Sync component state with client state initially
-  useEffect(() => {
-    if (
-      !client ||
-      transportState !== "initialized" ||
-      typeof client.isMicEnabled !== "boolean"
-    )
-      return;
-    setIsMicEnabled(client.isMicEnabled);
-  }, [client, transportState]);
-
-  const enableMic = useCallback(
-    (enabled: boolean) => {
-      setIsMicEnabled(enabled);
-      client?.enableMic?.(enabled);
-    },
-    [client]
-  );
-
-  return {
-    enableMic,
-    isMicEnabled,
-  };
-};
+export const useRTVIClientMicControl = () =>
+  useContext(PipecatClientMicStateContext);

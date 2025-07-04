@@ -1,41 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+/**
+ * Copyright (c) 2024, Daily.
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+import { useContext } from "react";
 
-import { usePipecatClient } from "./usePipecatClient";
-import { usePipecatClientTransportState } from "./usePipecatClientTransportState";
+import { PipecatClientCamStateContext } from "./PipecatClientState";
 
 /**
  * Hook to control camera state
  */
-export const usePipecatClientCamControl = () => {
-  const client = usePipecatClient();
-
-  const [isCamEnabled, setIsCamEnabled] = useState(
-    client?.isCamEnabled ?? false
-  );
-
-  const transportState = usePipecatClientTransportState();
-
-  // Sync component state with client state initially
-  useEffect(() => {
-    if (
-      !client ||
-      transportState !== "initialized" ||
-      typeof client.isCamEnabled !== "boolean"
-    )
-      return;
-    setIsCamEnabled(client.isCamEnabled);
-  }, [client, transportState]);
-
-  const enableCam = useCallback(
-    (enabled: boolean) => {
-      setIsCamEnabled(enabled);
-      client?.enableCam?.(enabled);
-    },
-    [client]
-  );
-
-  return {
-    enableCam,
-    isCamEnabled,
-  };
-};
+export const useRTVIClientCamControl = () =>
+  useContext(PipecatClientCamStateContext);

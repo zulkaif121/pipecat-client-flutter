@@ -18,6 +18,7 @@ import {
   name as packageName,
   version as packageVersion,
 } from "../package.json";
+import { PipecatClientStateProvider } from "./PipecatClientState";
 import { RTVIEventContext } from "./RTVIEventContext";
 
 export interface Props {
@@ -115,7 +116,7 @@ export const PipecatClientProvider: React.FC<
     <JotaiProvider store={jotaiStore}>
       <PipecatClientContext.Provider value={{ client }}>
         <RTVIEventContext.Provider value={{ on, off }}>
-          {children}
+          <PipecatClientStateProvider>{children}</PipecatClientStateProvider>
         </RTVIEventContext.Provider>
       </PipecatClientContext.Provider>
     </JotaiProvider>
