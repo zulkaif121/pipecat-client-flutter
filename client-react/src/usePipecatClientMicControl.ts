@@ -11,5 +11,5 @@ import { PipecatClientMicStateContext } from "./PipecatClientState";
 /**
  * Hook to control microphone state
  */
-export const useRTVIClientMicControl = () =>
+export const usePipecatClientMicControl = () =>
   useContext(PipecatClientMicStateContext);

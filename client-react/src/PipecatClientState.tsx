@@ -16,7 +16,7 @@ export const PipecatClientCamStateContext = createContext<{
 }>({
   enableCam: () => {
     throw new Error(
-      "RTVICamStateContext: enableCam() called outside of provider"
+      "PipecatClientCamStateContext: enableCam() called outside of provider"
     );
   },
   isCamEnabled: false,
@@ -27,7 +27,7 @@ export const PipecatClientMicStateContext = createContext<{
 }>({
   enableMic: () => {
     throw new Error(
-      "RTVIMicStateContext: enableMic() called outside of provider"
+      "PipecatClientMicStateContext: enableMic() called outside of provider"
     );
   },
   isMicEnabled: false,

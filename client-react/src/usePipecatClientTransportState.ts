@@ -8,5 +8,5 @@ import { useContext } from "react";
 
 import { PipecatClientTransportStateContext } from "./PipecatClientState";
 
-export const useRTVIClientTransportState = () =>
+export const usePipecatClientTransportState = () =>
   useContext(PipecatClientTransportStateContext);

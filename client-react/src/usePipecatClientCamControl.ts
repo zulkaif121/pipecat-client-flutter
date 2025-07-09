@@ -10,5 +10,5 @@ import { PipecatClientCamStateContext } from "./PipecatClientState";
 /**
  * Hook to control camera state
  */
-export const useRTVIClientCamControl = () =>
+export const usePipecatClientCamControl = () =>
   useContext(PipecatClientCamStateContext);
