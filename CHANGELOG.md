@@ -5,6 +5,10 @@ All notable changes to **Pipecat Client Web** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1]
+
+- Fixed state synchronization between different instances of `usePipecatClientCamControl()`, `usePipecatClientMicControl()` and `usePipecatClientTransportState()` ([#125](https://github.com/pipecat-ai/pipecat-client-web/pull/125))
+
 ## [1.0.0]
 
 - RTVI 1.0 Protocol Updates:
@@ -31,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - CHANGED:
     - sending a client message (send and forget style): `sendMessage()` -> `sendClientMessage()`
   - Added warning log on `bot-ready` if the server version < 1.0.0, indicating that rtvi communication problems are likely
-
 
 ## [0.4.1] - 2025-06-11
 
