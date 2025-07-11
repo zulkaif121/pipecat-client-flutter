@@ -1,7 +1,6 @@
 {
   "private": true,
   "name": "@pipecat-ai/client-web",
-  "version": "1.0.0",
   "workspaces": [
     "client-js",
     "client-react"
