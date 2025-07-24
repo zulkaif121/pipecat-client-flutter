@@ -1,0 +1,51 @@
+name: Build Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - '*'
+  workflow_dispatch:
+    inputs:
+      client:
+        description: 'Which client to build (leave empty to build both)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - client-js
+          - client-react
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        registry-url: 'https://registry.npmjs.org'
+        
+    - name: Configure Git
+      run: |
+        git config --global user.name 'GitHub Actions'
+        git config --global user.email 'github-actions@github.com'
+        
+    - name: Install dependencies
+      run: npm ci --include=dev
+      
+    - name: Build specific client
+      if: github.event.inputs.client != ''
+      run: |
+        cd ${{ github.event.inputs.client }}
+        npm run build
+        
+    - name: Build all clients
+      if: github.event.inputs.client == '' || github.event.inputs.client == null
+      run: npm run build
