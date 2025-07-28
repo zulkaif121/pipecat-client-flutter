@@ -79,6 +79,7 @@ export type RTVIEventCallbacks = Partial<{
   onCamUpdated: (cam: MediaDeviceInfo) => void;
   onMicUpdated: (mic: MediaDeviceInfo) => void;
   onSpeakerUpdated: (speaker: MediaDeviceInfo) => void;
+  onDeviceError: (error: RTVIErrors.DeviceError) => void;
   onTrackStarted: (track: MediaStreamTrack, participant?: Participant) => void;
   onTrackStopped: (track: MediaStreamTrack, participant?: Participant) => void;
   onScreenTrackStarted: (
@@ -247,6 +248,10 @@ export class PipecatClient extends RTVIEventEmitter {
       onSpeakerUpdated: (speaker) => {
         options?.callbacks?.onSpeakerUpdated?.(speaker);
         this.emit(RTVIEvent.SpeakerUpdated, speaker);
+      },
+      onDeviceError: (error) => {
+        options?.callbacks?.onDeviceError?.(error);
+        this.emit(RTVIEvent.DeviceError, error);
       },
       onBotConnected: (p) => {
         options?.callbacks?.onBotConnected?.(p);
