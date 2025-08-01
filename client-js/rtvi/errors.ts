@@ -60,3 +60,35 @@ export class UnsupportedFeatureError extends RTVIError {
     this.feature = feature;
   }
 }
+
+export type DeviceArray = Array<"cam" | "mic" | "speaker">;
+export type DeviceErrorType =
+  | "cam-in-use"
+  | "mic-in-use"
+  | "cam-mic-in-use"
+  | "permissions"
+  | "undefined-mediadevices"
+  | "not-found"
+  | "constraints"
+  | "unknown";
+export type DeviceErrorDetails = Record<
+  string,
+  string | boolean | number | Error
+>;
+
+export class DeviceError extends RTVIError {
+  readonly devices: DeviceArray;
+  readonly type: DeviceErrorType;
+  readonly details: DeviceErrorDetails | undefined;
+  constructor(
+    devices: DeviceArray,
+    type: DeviceErrorType,
+    message?: string,
+    details?: DeviceErrorDetails
+  ) {
+    super(message ?? `Device error for ${devices.join(", ")}: ${type}`);
+    this.devices = devices;
+    this.type = type;
+    this.details = details;
+  }
+}

@@ -5,6 +5,7 @@
  */
 
 import { Participant, TransportState } from "./common_types";
+import { DeviceError } from "./errors";
 import {
   BotLLMSearchResponseData,
   BotLLMTextData,
@@ -81,6 +82,7 @@ export enum RTVIEvent {
   CamUpdated = "camUpdated",
   MicUpdated = "micUpdated",
   SpeakerUpdated = "speakerUpdated",
+  DeviceError = "deviceError",
 }
 
 export type RTVIEvents = Partial<{
@@ -150,6 +152,7 @@ export type RTVIEvents = Partial<{
   camUpdated: (cam: MediaDeviceInfo) => void;
   micUpdated: (mic: MediaDeviceInfo) => void;
   speakerUpdated: (speaker: MediaDeviceInfo) => void;
+  deviceError: (error: DeviceError) => void;
 }>;
 
 export type RTVIEventHandler<E extends RTVIEvent> = E extends keyof RTVIEvents
