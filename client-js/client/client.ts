@@ -34,9 +34,10 @@ import { transportReady } from "./decorators";
 import { MessageDispatcher } from "./dispatcher";
 import { logger, LogLevel } from "./logger";
 import {
+  APIEndpoint,
   ConnectionEndpoint,
   getTransportConnectionParams,
-  isConnectionEndpoint,
+  isAPIEndpoint,
 } from "./rest_helpers";
 import {
   Tracks,
@@ -354,14 +355,43 @@ export class PipecatClient extends RTVIEventEmitter {
   }
 
   /**
+   * startBot() is a method that initiates the bot by posting to a specified endpoint
+   * that optionally returns connection parameters for establishing a transport session.
+   * @param startBotParams
+   * @returns Promise that resolves to TransportConnectionParams or unknown
+   */
+  public async startBot(
+    startBotParams: APIEndpoint
+  ): Promise<TransportConnectionParams | unknown> {
+    if (
+      ["authenticating", "connecting", "connected", "ready"].includes(
+        this._transport.state
+      )
+    ) {
+      throw new RTVIErrors.RTVIError(
+        "Voice client has already been started. Please call disconnect() before starting again."
+      );
+    }
+    this._transport.state = "authenticating";
+    this._abortController = new AbortController();
+    const response = await getTransportConnectionParams(
+      startBotParams,
+      this._abortController
+    );
+    this._transport.state = "authenticated";
+    return response;
+  }
+
+  /**
    * The `connect` function establishes a transport session and awaits a
    * bot-ready signal, handling various connection states and errors.
-   * @param {TransportConnectionParams | ConnectionEndpoint} [connectParams] -
-   * The `connectParams` parameter in the `connect` method can be either of type
-   * `TransportConnectionParams` or `ConnectionEndpoint`. It is used to provide
-   * connection parameters for establishing a transport session. If
-   * `connectParams` is of type `ConnectionEndpoint`, the method will go through
-   * an authentication process
+   * @param {TransportConnectionParams} [connectParams] -
+   * The `connectParams` parameter in the `connect` method should be of type
+   * `TransportConnectionParams`. This parameter is passed to the transport
+   * for establishing a transport session.
+   * NOTE: `connectParams` as type `ConnectionEndpoint` IS NOW DEPRECATED. If you
+   * want to authenticate and connect to a bot in one step, use
+   * `startBotAndConnect()` instead.
    * @returns The `connect` method returns a Promise that resolves to an unknown value.
    */
   public async connect(
@@ -377,6 +407,13 @@ export class PipecatClient extends RTVIEventEmitter {
       );
     }
 
+    if (connectParams && isAPIEndpoint(connectParams)) {
+      logger.warn(
+        "Calling connect with an API endpoint is deprecated. Use startBotAndConnect() instead."
+      );
+      return this.startBotAndConnect(connectParams as APIEndpoint);
+    }
+
     // Establish transport session and await bot ready signal
     return new Promise((resolve, reject) => {
       (async () => {
@@ -387,22 +424,9 @@ export class PipecatClient extends RTVIEventEmitter {
         }
 
         try {
-          let cxnParams: TransportConnectionParams;
-          if (connectParams) {
-            if (isConnectionEndpoint(connectParams)) {
-              this._transport.state = "authenticating";
-              this._abortController = new AbortController();
-              cxnParams = await getTransportConnectionParams(
-                connectParams as ConnectionEndpoint,
-                this._abortController
-              );
-              if (this._abortController?.signal.aborted) return;
-              this._transport.state = "authenticated";
-            } else {
-              cxnParams = connectParams as TransportConnectionParams;
-            }
-          }
-          await this._transport.connect(cxnParams);
+          await this._transport.connect(
+            connectParams as TransportConnectionParams
+          );
           await this._transport.sendReadyMessage();
         } catch (e) {
           this.disconnect();
@@ -411,6 +435,13 @@ export class PipecatClient extends RTVIEventEmitter {
         }
       })();
     });
+  }
+
+  public async startBotAndConnect(
+    startBotParams: APIEndpoint
+  ): Promise<unknown> {
+    const connectionParams = await this.startBot(startBotParams);
+    return this.connect(connectionParams);
   }
 
   /**

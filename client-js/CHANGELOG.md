@@ -5,6 +5,14 @@ All notable changes to **Pipecat Client JS** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- Improved flexibility and clarity around `connect()`:
+  - Renamed `ConnectionEndpoint` to `APIEndpoint` for clarity.
+  - Deprecated use of `connect()` with a `ConnectionEndpoint` params type in favor of separating out the authorization step from the connection step. Uses of `connect()` with a `ConnectionEndpoint` should be updated to call `startBotAndConnect()` instead. See below.  `connect()` now performs only the portion of the logic for connecting the transport. If called with a `ConnectionEndpoint`, it will call `startBotAndConnect()` under the hood.
+  - Introduced `startBot()` for performing just the endpoint POST for kicking off a bot process and optionally returning connection parameters required by the transport.
+  - Introduced `startBotAndConnect()` which takes an `APIEndpoint` and calls both `startBot()` and `connect()`, passing any data returned from the `startBot()` endpoint to `connect()` as transport parameters.
+
 ## [1.1.0]
 
 - Added support for handling errors with the local cam/mic/speaker by introducing a new PipecatClient callback, `onDeviceError`, and RTVI event, `deviceError`.

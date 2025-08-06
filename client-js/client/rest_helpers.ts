@@ -10,26 +10,31 @@ type Serializable =
   | Serializable[]
   | { [key: number | string]: Serializable };
 
-export interface ConnectionEndpoint {
-  endpoint: string;
+export interface APIEndpoint {
+  endpoint: string | URL | globalThis.Request;
   headers?: Headers;
   requestData?: Serializable;
   timeout?: number;
 }
 
-export function isConnectionEndpoint(value: unknown): boolean {
+/**
+ * @deprecated Use APIEndpoint instead
+ */
+export type ConnectionEndpoint = APIEndpoint;
+
+export function isAPIEndpoint(value: unknown): boolean {
   if (
     typeof value === "object" &&
     value !== null &&
     Object.keys(value).includes("endpoint")
   ) {
-    return typeof (value as ConnectionEndpoint)["endpoint"] === "string";
+    return typeof (value as APIEndpoint)["endpoint"] === "string";
   }
   return false;
 }
 
 export async function getTransportConnectionParams(
-  cxnOpts: ConnectionEndpoint,
+  cxnOpts: APIEndpoint,
   abortController?: AbortController
 ): Promise<TransportConnectionParams> {
   if (!abortController) {
