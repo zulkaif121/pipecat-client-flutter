@@ -28,7 +28,12 @@ export function isAPIEndpoint(value: unknown): boolean {
     value !== null &&
     Object.keys(value).includes("endpoint")
   ) {
-    return typeof (value as APIEndpoint)["endpoint"] === "string";
+    const endpoint = (value as APIEndpoint)["endpoint"];
+    return (
+      typeof endpoint === "string" ||
+      endpoint instanceof URL ||
+      (typeof Request !== "undefined" && endpoint instanceof Request)
+    );
   }
   return false;
 }
