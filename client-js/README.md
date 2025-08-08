@@ -48,7 +48,7 @@ const pcClient = new PipecatClient({
 });
 
 try {
-  await pcClient.connect({ endpoint: "https://your-connect-end-point-here/connect" });
+  await pcClient.startBotAndConnect({ endpoint: "https://your-connect-end-point-here/connect" });
 } catch (e) {
   console.error(e.message);
 }

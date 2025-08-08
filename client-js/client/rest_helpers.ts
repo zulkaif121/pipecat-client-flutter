@@ -1,6 +1,4 @@
-import * as RTVIErrors from "../rtvi/errors";
 import { logger } from "./logger";
-import { TransportConnectionParams } from "./transport";
 
 type Serializable =
   | string
@@ -10,28 +8,38 @@ type Serializable =
   | Serializable[]
   | { [key: number | string]: Serializable };
 
-export interface ConnectionEndpoint {
-  endpoint: string;
+export interface APIRequest {
+  endpoint: string | URL | globalThis.Request;
   headers?: Headers;
   requestData?: Serializable;
   timeout?: number;
 }
 
-export function isConnectionEndpoint(value: unknown): boolean {
+/**
+ * @deprecated Use APIRequest instead
+ */
+export type ConnectionEndpoint = APIRequest;
+
+export function isAPIRequest(value: unknown): boolean {
   if (
     typeof value === "object" &&
     value !== null &&
     Object.keys(value).includes("endpoint")
   ) {
-    return typeof (value as ConnectionEndpoint)["endpoint"] === "string";
+    const endpoint = (value as APIRequest)["endpoint"];
+    return (
+      typeof endpoint === "string" ||
+      endpoint instanceof URL ||
+      (typeof Request !== "undefined" && endpoint instanceof Request)
+    );
   }
   return false;
 }
 
-export async function getTransportConnectionParams(
-  cxnOpts: ConnectionEndpoint,
+export async function makeRequest(
+  cxnOpts: APIRequest,
   abortController?: AbortController
-): Promise<TransportConnectionParams> {
+): Promise<unknown> {
   if (!abortController) {
     abortController = new AbortController();
   }
@@ -46,9 +54,7 @@ export async function getTransportConnectionParams(
         }, cxnOpts.timeout);
       }
 
-      logger.debug(
-        `[Pipecat Client] Fetching connection params from ${cxnOpts.endpoint}`
-      );
+      logger.debug(`[Pipecat Client] Fetching from ${cxnOpts.endpoint}`);
       fetch(cxnOpts.endpoint, {
         method: "POST",
         mode: "cors",
@@ -65,26 +71,13 @@ export async function getTransportConnectionParams(
             res
           );
           if (!res.ok) {
-            throw res;
+            reject(res);
           }
           res.json().then((data) => resolve(data));
         })
         .catch((err) => {
-          logger.error(
-            `[Pipecat Client] Error fetching connection params: ${err}`
-          );
-          if (err instanceof Response) {
-            err.json().then((errResp) => {
-              reject(
-                new RTVIErrors.StartBotError(
-                  errResp.info ?? errResp.detail ?? err.statusText,
-                  err.status
-                )
-              );
-            });
-          } else {
-            reject(new RTVIErrors.StartBotError());
-          }
+          logger.error(`[Pipecat Client] Error fetching: ${err}`);
+          reject(err);
         })
         .finally(() => {
           if (handshakeTimeout) {

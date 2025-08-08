@@ -114,7 +114,7 @@ const pcClient = new PipecatClient({
 });
 
 try {
-  await pcClient.connect({ endpoint: "https://your-server-side-url/connect" });
+  await pcClient.startBotAndConnect({ endpoint: "https://your-server-side-url/connect" });
 } catch (e) {
   console.error(e.message);
 }

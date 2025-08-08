@@ -34,9 +34,10 @@ import { transportReady } from "./decorators";
 import { MessageDispatcher } from "./dispatcher";
 import { logger, LogLevel } from "./logger";
 import {
+  APIRequest,
   ConnectionEndpoint,
-  getTransportConnectionParams,
-  isConnectionEndpoint,
+  isAPIRequest,
+  makeRequest,
 } from "./rest_helpers";
 import {
   Tracks,
@@ -148,7 +149,7 @@ abstract class RTVIEventEmitter extends (EventEmitter as unknown as new () => Ty
 
 export class PipecatClient extends RTVIEventEmitter {
   protected _options: PipecatClientOptions;
-  private _startResolve: ((value: unknown) => void) | undefined;
+  private _connectResolve: ((value: BotReadyData) => void) | undefined;
   protected _transport: Transport;
   protected _transportWrapper: TransportWrapper;
   protected declare _messageDispatcher: MessageDispatcher;
@@ -354,19 +355,60 @@ export class PipecatClient extends RTVIEventEmitter {
   }
 
   /**
+   * startBot() is a method that initiates the bot by posting to a specified endpoint
+   * that optionally returns connection parameters for establishing a transport session.
+   * @param startBotParams
+   * @returns Promise that resolves to TransportConnectionParams or unknown
+   */
+  public async startBot(startBotParams: APIRequest): Promise<unknown> {
+    if (
+      ["authenticating", "connecting", "connected", "ready"].includes(
+        this._transport.state
+      )
+    ) {
+      throw new RTVIErrors.RTVIError(
+        "Voice client has already been started. Please call disconnect() before starting again."
+      );
+    }
+    this._transport.state = "authenticating";
+    this._abortController = new AbortController();
+    let response: unknown;
+    try {
+      response = await makeRequest(startBotParams, this._abortController);
+    } catch (e) {
+      if (e instanceof Response) {
+        const errResp = await e.json();
+        throw new RTVIErrors.StartBotError(
+          errResp.info ?? errResp.detail ?? e.statusText,
+          e.status
+        );
+      } else if (e instanceof Error) {
+        throw new RTVIErrors.StartBotError(e.message);
+      } else {
+        throw new RTVIErrors.StartBotError(
+          "An unknown error occurred while starting the bot."
+        );
+      }
+    }
+    this._transport.state = "authenticated";
+    return response;
+  }
+
+  /**
    * The `connect` function establishes a transport session and awaits a
    * bot-ready signal, handling various connection states and errors.
-   * @param {TransportConnectionParams | ConnectionEndpoint} [connectParams] -
-   * The `connectParams` parameter in the `connect` method can be either of type
-   * `TransportConnectionParams` or `ConnectionEndpoint`. It is used to provide
-   * connection parameters for establishing a transport session. If
-   * `connectParams` is of type `ConnectionEndpoint`, the method will go through
-   * an authentication process
+   * @param {TransportConnectionParams} [connectParams] -
+   * The `connectParams` parameter in the `connect` method should be of type
+   * `TransportConnectionParams`. This parameter is passed to the transport
+   * for establishing a transport session.
+   * NOTE: `connectParams` as type `ConnectionEndpoint` IS NOW DEPRECATED. If you
+   * want to authenticate and connect to a bot in one step, use
+   * `startBotAndConnect()` instead.
    * @returns The `connect` method returns a Promise that resolves to an unknown value.
    */
   public async connect(
     connectParams?: TransportConnectionParams | ConnectionEndpoint
-  ): Promise<unknown> {
+  ): Promise<BotReadyData> {
     if (
       ["authenticating", "connecting", "connected", "ready"].includes(
         this._transport.state
@@ -377,32 +419,26 @@ export class PipecatClient extends RTVIEventEmitter {
       );
     }
 
+    if (connectParams && isAPIRequest(connectParams)) {
+      logger.warn(
+        "Calling connect with an API endpoint is deprecated. Use startBotAndConnect() instead."
+      );
+      return this.startBotAndConnect(connectParams as APIRequest);
+    }
+
     // Establish transport session and await bot ready signal
     return new Promise((resolve, reject) => {
       (async () => {
-        this._startResolve = resolve;
+        this._connectResolve = resolve;
 
         if (this._transport.state === "disconnected") {
           await this._transport.initDevices();
         }
 
         try {
-          let cxnParams: TransportConnectionParams;
-          if (connectParams) {
-            if (isConnectionEndpoint(connectParams)) {
-              this._transport.state = "authenticating";
-              this._abortController = new AbortController();
-              cxnParams = await getTransportConnectionParams(
-                connectParams as ConnectionEndpoint,
-                this._abortController
-              );
-              if (this._abortController?.signal.aborted) return;
-              this._transport.state = "authenticated";
-            } else {
-              cxnParams = connectParams as TransportConnectionParams;
-            }
-          }
-          await this._transport.connect(cxnParams);
+          await this._transport.connect(
+            connectParams as TransportConnectionParams
+          );
           await this._transport.sendReadyMessage();
         } catch (e) {
           this.disconnect();
@@ -411,6 +447,13 @@ export class PipecatClient extends RTVIEventEmitter {
         }
       })();
     });
+  }
+
+  public async startBotAndConnect(
+    startBotParams: APIRequest
+  ): Promise<BotReadyData> {
+    const connectionParams = await this.startBot(startBotParams);
+    return this.connect(connectionParams);
   }
 
   /**
@@ -607,7 +650,7 @@ export class PipecatClient extends RTVIEventEmitter {
             "[Pipecat Client] Bot version is less than 1.0.0, which may not be compatible with this client."
           );
         }
-        this._startResolve?.(ev.data as BotReadyData);
+        this._connectResolve?.(ev.data as BotReadyData);
         this._options.callbacks?.onBotReady?.(ev.data as BotReadyData);
         break;
       }
