@@ -34,10 +34,10 @@ import { transportReady } from "./decorators";
 import { MessageDispatcher } from "./dispatcher";
 import { logger, LogLevel } from "./logger";
 import {
-  APIEndpoint,
+  APIRequest,
   ConnectionEndpoint,
-  getTransportConnectionParams,
-  isAPIEndpoint,
+  isAPIRequest,
+  makeRequest,
 } from "./rest_helpers";
 import {
   Tracks,
@@ -149,7 +149,7 @@ abstract class RTVIEventEmitter extends (EventEmitter as unknown as new () => Ty
 
 export class PipecatClient extends RTVIEventEmitter {
   protected _options: PipecatClientOptions;
-  private _startResolve: ((value: unknown) => void) | undefined;
+  private _connectResolve: ((value: BotReadyData) => void) | undefined;
   protected _transport: Transport;
   protected _transportWrapper: TransportWrapper;
   protected declare _messageDispatcher: MessageDispatcher;
@@ -360,9 +360,7 @@ export class PipecatClient extends RTVIEventEmitter {
    * @param startBotParams
    * @returns Promise that resolves to TransportConnectionParams or unknown
    */
-  public async startBot(
-    startBotParams: APIEndpoint
-  ): Promise<TransportConnectionParams | unknown> {
+  public async startBot(startBotParams: APIRequest): Promise<unknown> {
     if (
       ["authenticating", "connecting", "connected", "ready"].includes(
         this._transport.state
@@ -374,10 +372,24 @@ export class PipecatClient extends RTVIEventEmitter {
     }
     this._transport.state = "authenticating";
     this._abortController = new AbortController();
-    const response = await getTransportConnectionParams(
-      startBotParams,
-      this._abortController
-    );
+    let response: unknown;
+    try {
+      response = await makeRequest(startBotParams, this._abortController);
+    } catch (e) {
+      if (e instanceof Response) {
+        const errResp = await e.json();
+        throw new RTVIErrors.StartBotError(
+          errResp.info ?? errResp.detail ?? e.statusText,
+          e.status
+        );
+      } else if (e instanceof Error) {
+        throw new RTVIErrors.StartBotError(e.message);
+      } else {
+        throw new RTVIErrors.StartBotError(
+          "An unknown error occurred while starting the bot."
+        );
+      }
+    }
     this._transport.state = "authenticated";
     return response;
   }
@@ -396,7 +408,7 @@ export class PipecatClient extends RTVIEventEmitter {
    */
   public async connect(
     connectParams?: TransportConnectionParams | ConnectionEndpoint
-  ): Promise<unknown> {
+  ): Promise<BotReadyData> {
     if (
       ["authenticating", "connecting", "connected", "ready"].includes(
         this._transport.state
@@ -407,17 +419,17 @@ export class PipecatClient extends RTVIEventEmitter {
       );
     }
 
-    if (connectParams && isAPIEndpoint(connectParams)) {
+    if (connectParams && isAPIRequest(connectParams)) {
       logger.warn(
         "Calling connect with an API endpoint is deprecated. Use startBotAndConnect() instead."
       );
-      return this.startBotAndConnect(connectParams as APIEndpoint);
+      return this.startBotAndConnect(connectParams as APIRequest);
     }
 
     // Establish transport session and await bot ready signal
     return new Promise((resolve, reject) => {
       (async () => {
-        this._startResolve = resolve;
+        this._connectResolve = resolve;
 
         if (this._transport.state === "disconnected") {
           await this._transport.initDevices();
@@ -438,8 +450,8 @@ export class PipecatClient extends RTVIEventEmitter {
   }
 
   public async startBotAndConnect(
-    startBotParams: APIEndpoint
-  ): Promise<unknown> {
+    startBotParams: APIRequest
+  ): Promise<BotReadyData> {
     const connectionParams = await this.startBot(startBotParams);
     return this.connect(connectionParams);
   }
@@ -638,7 +650,7 @@ export class PipecatClient extends RTVIEventEmitter {
             "[Pipecat Client] Bot version is less than 1.0.0, which may not be compatible with this client."
           );
         }
-        this._startResolve?.(ev.data as BotReadyData);
+        this._connectResolve?.(ev.data as BotReadyData);
         this._options.callbacks?.onBotReady?.(ev.data as BotReadyData);
         break;
       }
