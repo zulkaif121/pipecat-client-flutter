@@ -109,6 +109,7 @@ export type RTVIEventCallbacks = Partial<{
   onBotTtsStarted: () => void;
   onBotTtsStopped: () => void;
 
+  onLLMFunctionCall: (data: LLMFunctionCallData) => void;
   onBotLlmSearchResponse: (data: BotLLMSearchResponseData) => void;
 }>;
 
@@ -723,13 +724,26 @@ export class PipecatClient extends RTVIEventEmitter {
       }
       case RTVIMessageType.LLM_FUNCTION_CALL: {
         const data = ev.data as LLMFunctionCallData;
+        // First check if there's a registered function call handler
+        // and trigger it if so.
         const fc = this._functionCallCallbacks[data.function_name];
         if (fc) {
           const params = {
             functionName: data.function_name,
             arguments: data.args,
           };
+          /*
+           * registered function call handlers have the ability to
+           * asynchronously return a result that is sent back to the server
+           * as an automatically crafted LLM_FUNCTION_CALL_RESULT message.
+           * Note: If the callback returns null or undefined, no result message
+           * is sent.
+           */
           fc(params).then((result) => {
+            // == intentional to check for null or undefined
+            if (result == undefined) {
+              return;
+            }
             this._transport.sendMessage(
               new RTVIMessage(RTVIMessageType.LLM_FUNCTION_CALL_RESULT, {
                 function_name: data.function_name,
@@ -740,6 +754,13 @@ export class PipecatClient extends RTVIEventEmitter {
             );
           });
         }
+        /*
+         * Now emit the event for any generic LLMFunctionCall listeners/callbacks
+         * Note: When using these, the onus is on the client to generate and
+         *       send the LLM_FUNCTION_CALL_RESULT message if needed.
+         */
+        this._options.callbacks?.onLLMFunctionCall?.(data);
+        this.emit(RTVIEvent.LLMFunctionCall, data);
         break;
       }
       case RTVIMessageType.BOT_LLM_SEARCH_RESPONSE: {
