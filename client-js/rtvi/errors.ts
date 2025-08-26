@@ -47,6 +47,15 @@ export class BotNotReadyError extends RTVIError {
   }
 }
 
+export class BotAlreadyStartedError extends RTVIError {
+  constructor(message?: string | undefined) {
+    super(
+      message ??
+        "Pipecat client has already been started. Please call disconnect() before starting again."
+    );
+  }
+}
+
 export class UnsupportedFeatureError extends RTVIError {
   readonly feature: string;
   constructor(feature: string, source?: string, message?: string) {
