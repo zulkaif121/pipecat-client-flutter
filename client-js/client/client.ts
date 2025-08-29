@@ -602,6 +602,14 @@ export class PipecatClient extends RTVIEventEmitter {
     this._functionCallCallbacks[functionName] = callback;
   }
 
+  public unregisterFunctionCallHandler(functionName: string) {
+    delete this._functionCallCallbacks[functionName];
+  }
+
+  public unregisterAllFunctionCallHandlers() {
+    this._functionCallCallbacks = {};
+  }
+
   @transportReady
   public async appendToContext(context: LLMContextMessage) {
     const response = await this._messageDispatcher.dispatch(
