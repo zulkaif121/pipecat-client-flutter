@@ -38,6 +38,12 @@ export class TransportStartError extends RTVIError {
   }
 }
 
+export class InvalidTransportParamsError extends RTVIError {
+  constructor(message?: string | undefined) {
+    super(message ?? "Invalid transport connection parameters");
+  }
+}
+
 export class BotNotReadyError extends RTVIError {
   constructor(message?: string | undefined) {
     super(
