@@ -5,10 +5,20 @@ All notable changes to **Pipecat Client JS** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0]
+
+### Added
 
 - Add rest_helpers and utils to client-js library
 - Added support for registering a generic callback for LLM function call events to maintain consistency and flexibility.
+- Added two new `RTVIError` types:
+  - `BotAlreadyStartedError`: thrown when a `startBot()`, `connect()`, or `startBotAndConnect()` are called after having already started/connected.
+  - `InvalidTransportParamsError`: thrown on `connect()` when the provided `TransportConnectionParams` are invalid.
+- Added `unregisterFunctionCallHandler()` and `unregisterAllFunctionCallHandlers()` for, well, unregistering registered function call handlers :).
+
+### Fixed
+
+- Fixed issue where devices would not initialize automatically when using `startBotAndConnect()`
 
 ## [1.2.0]
 
