@@ -9,10 +9,11 @@ The official web client SDK for [Pipecat](https://github.com/pipecat-ai/pipecat)
 
 ## Overview
 
-This monorepo contains two packages:
+This repository contains multiple client packages:
 
 - `client-js`: JavaScript/TypeScript SDK for connecting to and communicating with Pipecat servers
 - `client-react`: React components and hooks for building Pipecat applications
+- `client-flutter`: Flutter SDK with clean architecture and provider state management for cross-platform apps (Android & Web)
 
 The SDK handles:
 
