@@ -4,7 +4,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../providers/pipecat_client_provider.dart';
 
@@ -69,29 +68,49 @@ class _PipecatClientAudioState extends State<PipecatClientAudio> {
       height: 60,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: StreamBuilder(
-        stream: client.eventStream,
-        builder: (context, snapshot) {
-          // Simple placeholder for audio visualization
-          // In a real implementation, this would show audio levels
-          return const Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _AudioBar(height: 20),
-                SizedBox(width: 4),
-                _AudioBar(height: 35),
-                SizedBox(width: 4),
-                _AudioBar(height: 45),
-                SizedBox(width: 4),
-                _AudioBar(height: 30),
-                SizedBox(width: 4),
-                _AudioBar(height: 25),
-              ],
-            ),
+      child: StreamBuilder<bool>(
+        stream: client.audioPlaybackStream,
+        initialData: false,
+        builder: (context, audioSnapshot) {
+          final isConnected = client.isConnected;
+          final isPlayingAudio = audioSnapshot.data ?? false;
+
+          return StreamBuilder(
+            stream: client.eventStream,
+            builder: (context, eventSnapshot) {
+              return Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      isConnected
+                        ? (isPlayingAudio ? 'Playing Audio' : 'Connected - Ready')
+                        : 'Disconnected',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: isConnected
+                          ? (isPlayingAudio ? Colors.green : Colors.blue)
+                          : Colors.red,
+                      ),
+                    ),
+                    if (isConnected) ...[
+                      const SizedBox(width: 16),
+                      _AudioBar(height: isPlayingAudio ? 40 : 20, isActive: isPlayingAudio),
+                      const SizedBox(width: 4),
+                      _AudioBar(height: isPlayingAudio ? 35 : 15, isActive: isPlayingAudio),
+                      const SizedBox(width: 4),
+                      _AudioBar(height: isPlayingAudio ? 45 : 25, isActive: isPlayingAudio),
+                      const SizedBox(width: 4),
+                      _AudioBar(height: isPlayingAudio ? 30 : 18, isActive: isPlayingAudio),
+                      const SizedBox(width: 4),
+                      _AudioBar(height: isPlayingAudio ? 25 : 12, isActive: isPlayingAudio),
+                    ],
+                  ],
+                ),
+              );
+            },
           );
         },
       ),
@@ -112,7 +131,7 @@ class _PipecatClientAudioState extends State<PipecatClientAudio> {
                   hint: const Text('Select Microphone'),
                   items: devices.map((device) {
                     return DropdownMenuItem<String>(
-                      value: device.id,
+                      value: device.deviceId,
                       child: Text(device.label),
                     );
                   }).toList(),
@@ -129,11 +148,9 @@ class _PipecatClientAudioState extends State<PipecatClientAudio> {
         ),
         const SizedBox(width: 16),
         IconButton(
-          onPressed: () {
-            // Toggle mute/unmute
-          },
-          icon: const Icon(Icons.mic),
-          tooltip: 'Toggle Microphone',
+          onPressed: client.isMicEnabled ? () => client.enableMic(false) : () => client.enableMic(true),
+          icon: Icon(client.isMicEnabled ? Icons.mic : Icons.mic_off),
+          tooltip: client.isMicEnabled ? 'Mute Microphone' : 'Unmute Microphone',
         ),
       ],
     );
@@ -141,18 +158,21 @@ class _PipecatClientAudioState extends State<PipecatClientAudio> {
 }
 
 class _AudioBar extends StatelessWidget {
-  const _AudioBar({required this.height});
+  const _AudioBar({required this.height, this.isActive = false});
 
   final double height;
+  final bool isActive;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 300),
       width: 6,
       height: height,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary,
+        color: isActive
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.outline,
         borderRadius: BorderRadius.circular(3),
       ),
     );

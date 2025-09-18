@@ -91,8 +91,11 @@ class ConnectionStateProvider extends ChangeNotifier {
   String get statusDescription {
     return _transportState.when(
       disconnected: () => 'Disconnected',
+      initializing: () => 'Initializing...',
+      initialized: () => 'Initialized',
       connecting: () => 'Connecting...',
       connected: () => _isBotReady ? 'Connected and Ready' : 'Connected',
+      disconnecting: () => 'Disconnecting...',
       ready: () => 'Ready',
       error: (message) => 'Error: $message',
     );

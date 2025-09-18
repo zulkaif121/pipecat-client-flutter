@@ -2,6 +2,8 @@
 /// 
 /// SPDX-License-Identifier: BSD-2-Clause
 
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+
 import '../models/rtvi_message_model.dart';
 import '../../domain/entities/transport_state.dart';
 import '../../core/constants/rtvi_events.dart';
@@ -11,7 +13,7 @@ abstract class Transport {
   /// Initialize the transport with configuration
   Future<void> initialize({
     bool enableMic = true,
-    bool enableCam = false,
+    bool enableCam = false, // Ignored - audio only
   });
 
   /// Connect to the remote endpoint
@@ -41,20 +43,23 @@ abstract class Transport {
   /// Enable or disable microphone
   Future<void> enableMic(bool enable);
 
-  /// Enable or disable camera  
-  Future<void> enableCam(bool enable);
+  /// Check if microphone is currently enabled
+  bool get isMicEnabled;
 
   /// Get available microphone devices
   Future<List<MediaDeviceInfo>> getAvailableMics();
 
-  /// Get available camera devices
-  Future<List<MediaDeviceInfo>> getAvailableCams();
-
   /// Set active microphone device
   Future<void> setMic(String deviceId);
 
-  /// Set active camera device
-  Future<void> setCam(String deviceId);
+  /// Start recording audio (for audio streaming)
+  Future<void> startRecording();
+
+  /// Stop recording audio
+  Future<void> stopRecording();
+
+  /// Check if currently recording
+  bool get isRecording;
 
   /// Dispose of resources
   Future<void> dispose();
@@ -71,15 +76,3 @@ class RTVIEventData {
   final Map<String, dynamic>? data;
 }
 
-/// Media device information
-class MediaDeviceInfo {
-  MediaDeviceInfo({
-    required this.deviceId,
-    required this.label,
-    required this.kind,
-  });
-
-  final String deviceId;
-  final String label;
-  final String kind;
-}

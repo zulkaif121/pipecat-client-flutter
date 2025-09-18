@@ -130,7 +130,7 @@ class _PipecatClientVideoState extends State<PipecatClientVideo> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -175,7 +175,7 @@ class _PipecatClientVideoState extends State<PipecatClientVideo> {
                   hint: const Text('Select Camera'),
                   items: devices.map((device) {
                     return DropdownMenuItem<String>(
-                      value: device.id,
+                      value: device.deviceId,
                       child: Text(device.label),
                     );
                   }).toList(),

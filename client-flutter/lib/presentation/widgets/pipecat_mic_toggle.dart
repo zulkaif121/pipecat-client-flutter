@@ -45,7 +45,7 @@ class _PipecatMicToggleState extends State<PipecatMicToggle> {
                   size: widget.iconSize,
                   color: _micEnabled
                       ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
           tooltip: _micEnabled ? 'Mute microphone' : 'Unmute microphone',
         );

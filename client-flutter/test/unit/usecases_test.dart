@@ -9,11 +9,12 @@ import 'package:mockito/annotations.dart';
 import 'package:pipecat_client_flutter/domain/repositories/pipecat_client_repository.dart';
 import 'package:pipecat_client_flutter/domain/usecases/connect_to_bot.dart';
 import 'package:pipecat_client_flutter/domain/usecases/disconnect_from_bot.dart';
+import 'package:pipecat_client_flutter/domain/usecases/send_action.dart';
 import 'package:pipecat_client_flutter/domain/usecases/send_message.dart';
 import 'package:pipecat_client_flutter/domain/entities/rtvi_message.dart';
 import 'package:pipecat_client_flutter/core/usecases/usecase.dart';
 
-import 'pipecat_client_provider_test.mocks.dart';
+import 'usecases_test.mocks.dart';
 
 @GenerateMocks([PipecatClientRepository])
 void main() {

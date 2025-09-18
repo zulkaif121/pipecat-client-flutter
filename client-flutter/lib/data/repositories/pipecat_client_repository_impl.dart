@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../../domain/entities/participant.dart';
@@ -12,6 +13,7 @@ import '../../domain/entities/transport_state.dart';
 import '../../domain/repositories/pipecat_client_repository.dart';
 import '../../core/constants/rtvi_events.dart';
 import '../datasources/transport.dart';
+import '../transports/websocket_audio_transport.dart';
 import '../models/rtvi_message_model.dart';
 
 /// Implementation of PipecatClientRepository
@@ -105,33 +107,28 @@ class PipecatClientRepositoryImpl implements PipecatClientRepository {
   bool get isBotReady => _isBotReady;
 
   @override
+  bool get isMicEnabled => _transport.isMicEnabled;
+
+  @override
   Future<void> enableMic(bool enable) async {
     await _transport.enableMic(enable);
   }
 
   @override
   Future<void> enableCam(bool enable) async {
-    await _transport.enableCam(enable);
+    // Camera functionality removed - audio only
+    throw UnsupportedError('Camera functionality not supported in audio-only mode');
   }
 
   @override
-  Future<List<MediaDevice>> getAvailableMics() async {
-    final devices = await _transport.getAvailableMics();
-    return devices.map((device) => MediaDevice(
-      id: device.deviceId,
-      label: device.label,
-      kind: device.kind,
-    )).toList();
+  Future<List<MediaDeviceInfo>> getAvailableMics() async {
+    return await _transport.getAvailableMics();
   }
 
   @override
-  Future<List<MediaDevice>> getAvailableCams() async {
-    final devices = await _transport.getAvailableCams();
-    return devices.map((device) => MediaDevice(
-      id: device.deviceId,
-      label: device.label,
-      kind: device.kind,
-    )).toList();
+  Future<List<MediaDeviceInfo>> getAvailableCams() async {
+    // Camera functionality removed - audio only
+    return <MediaDeviceInfo>[];
   }
 
   @override
@@ -141,7 +138,24 @@ class PipecatClientRepositoryImpl implements PipecatClientRepository {
 
   @override
   Future<void> setCam(String deviceId) async {
-    await _transport.setCam(deviceId);
+    // Camera functionality removed - audio only
+    throw UnsupportedError('Camera functionality not supported in audio-only mode');
+  }
+
+  /// Get audio playback stream (only available with WebSocketAudioTransport)
+  Stream<bool>? get audioPlaybackStream {
+    if (_transport is WebSocketAudioTransport) {
+      return (_transport as WebSocketAudioTransport).audioPlaybackStream;
+    }
+    return null;
+  }
+
+  /// Check if audio is currently playing (only available with WebSocketAudioTransport)
+  bool get isAudioPlaying {
+    if (_transport is WebSocketAudioTransport) {
+      return (_transport as WebSocketAudioTransport).isAudioPlaying;
+    }
+    return false;
   }
 
   @override

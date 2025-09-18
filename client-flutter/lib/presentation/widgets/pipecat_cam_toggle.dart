@@ -45,7 +45,7 @@ class _PipecatCamToggleState extends State<PipecatCamToggle> {
                   size: widget.iconSize,
                   color: _camEnabled
                       ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
           tooltip: _camEnabled ? 'Turn off camera' : 'Turn on camera',
         );

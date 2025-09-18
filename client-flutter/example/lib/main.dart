@@ -1,11 +1,9 @@
 /// Copyright (c) 2024, Pipecat AI.
-/// 
+///
 /// SPDX-License-Identifier: BSD-2-Clause
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
-import 'package:pipecat_client_flutter/pipecat_client_flutter.dart';
+import 'package:pipecat_client_flutter/pipecat_client_sdk.dart';
 
 void main() {
   runApp(const PipecatExampleApp());
@@ -37,13 +35,61 @@ class PipecatHomePage extends StatefulWidget {
 class _PipecatHomePageState extends State<PipecatHomePage> {
   late final PipecatClient _pipecatClient;
   final TextEditingController _endpointController = TextEditingController(
-    text: 'wss://your-server-endpoint.com/connect',
+    text:
+        'wss://d751acb421f4.ngrok-free.app/ws/test/06498233-ca75-47e7-9e14-34fc1d627030',
   );
+  bool _connected = false;
+  bool _connecting = false;
+  bool _micEnabled = true;
+  final List<String> _logs = [];
 
   @override
   void initState() {
     super.initState();
-    _pipecatClient = PipecatClientFactory.createWebRTCClient();
+    _pipecatClient = PipecatClient(PipecatClientOptions(
+      enableMic: true,
+      callbacks: PipecatClientCallbacks(
+        onConnected: () {
+          setState(() {
+            _connected = true;
+            _connecting = false;
+          });
+          _addLog('Connected to bot');
+        },
+        onDisconnected: () {
+          setState(() {
+            _connected = false;
+            _connecting = false;
+          });
+          _addLog('Disconnected from bot');
+        },
+        onBotReady: (data) {
+          _addLog('Bot ready: ${data.toString()}');
+        },
+        onUserTranscript: (data) {
+          if (data.isFinal) {
+            _addLog('User: ${data.text}');
+          }
+        },
+        onBotTranscript: (data) {
+          _addLog('Bot: ${data.text}');
+        },
+        onError: (error) {
+          _addLog('Error: ${error.data}');
+        },
+        
+      ),
+    ));
+  }
+
+  void _addLog(String message) {
+    setState(() {
+      _logs.insert(
+          0, '[${DateTime.now().toString().substring(11, 19)}] $message');
+      if (_logs.length > 50) {
+        _logs.removeLast();
+      }
+    });
   }
 
   @override
@@ -55,30 +101,22 @@ class _PipecatHomePageState extends State<PipecatHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: _pipecatClient.clientProvider),
-        ChangeNotifierProvider.value(value: _pipecatClient.connectionStateProvider),
-      ],
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          title: const Text('Pipecat Flutter Client'),
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildConnectionSection(),
-              const SizedBox(height: 24),
-              _buildControlsSection(),
-              const SizedBox(height: 24),
-              _buildMediaSection(),
-              const SizedBox(height: 24),
-              _buildStatusSection(),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: const Text('Pipecat Flutter Client'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildConnectionSection(),
+            const SizedBox(height: 24),
+            _buildControlsSection(),
+            const SizedBox(height: 24),
+            _buildStatusSection(),
+          ],
         ),
       ),
     );
@@ -100,41 +138,35 @@ class _PipecatHomePageState extends State<PipecatHomePage> {
               controller: _endpointController,
               decoration: const InputDecoration(
                 labelText: 'Server Endpoint',
-                hintText: 'wss://your-server.com/connect',
+                hintText: 'ws://your-server.com/ws/test/agent-id',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
-            Consumer<ConnectionStateProvider>(
-              builder: (context, connectionState, child) {
-                return Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: connectionState.isConnected || connectionState.isConnecting
-                            ? null
-                            : _connect,
-                        icon: connectionState.isConnecting
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.connect_without_contact),
-                        label: Text(connectionState.isConnecting ? 'Connecting...' : 'Connect'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: connectionState.isConnected ? _disconnect : null,
-                        icon: const Icon(Icons.disconnect),
-                        label: const Text('Disconnect'),
-                      ),
-                    ),
-                  ],
-                );
-              },
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _connected || _connecting ? null : _connect,
+                    icon: _connecting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.connect_without_contact),
+                    label: Text(_connecting ? 'Connecting...' : 'Connect'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _connected ? _disconnect : null,
+                    icon: const Icon(Icons.link_off),
+                    label: const Text('Disconnect'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -150,29 +182,28 @@ class _PipecatHomePageState extends State<PipecatHomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Controls',
+              'Controls (Audio Only)',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Column(
                   children: [
-                    const PipecatMicToggle(iconSize: 32),
+                    IconButton(
+                      onPressed: _connected ? _toggleMic : null,
+                      iconSize: 32,
+                      icon: Icon(
+                        _micEnabled ? Icons.mic : Icons.mic_off,
+                        color: _micEnabled
+                            ? Theme.of(context).primaryColor
+                            : Theme.of(context).disabledColor,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       'Microphone',
-                      style: Theme.of(context).textTheme.labelMedium,
-                    ),
-                  ],
-                ),
-                Column(
-                  children: [
-                    const PipecatCamToggle(iconSize: 32),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Camera',
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
                   ],
@@ -185,74 +216,46 @@ class _PipecatHomePageState extends State<PipecatHomePage> {
     );
   }
 
-  Widget _buildMediaSection() {
-    return const Column(
-      children: [
-        PipecatClientAudio(),
-        SizedBox(height: 16),
-        PipecatClientVideo(),
-      ],
-    );
-  }
-
   Widget _buildStatusSection() {
-    return Consumer2<PipecatClientProvider, ConnectionStateProvider>(
-      builder: (context, client, connectionState, child) {
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Status',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                _buildStatusRow('Connection', connectionState.statusDescription),
-                _buildStatusRow('Bot Ready', connectionState.isBotReady ? 'Yes' : 'No'),
-                if (connectionState.connectionDuration != null)
-                  _buildStatusRow(
-                    'Connected for',
-                    _formatDuration(connectionState.connectionDuration!),
-                  ),
-                if (client.errorMessage != null) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.error,
-                          color: Theme.of(context).colorScheme.onErrorContainer,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            client.errorMessage!,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onErrorContainer,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: client.clearError,
-                          icon: const Icon(Icons.close),
-                          iconSize: 20,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Status & Logs',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 16),
+            _buildStatusRow(
+                'Connection', _connected ? 'Connected' : 'Disconnected'),
+            _buildStatusRow('Microphone', _micEnabled ? 'Enabled' : 'Disabled'),
+            const SizedBox(height: 16),
+            Container(
+              height: 200,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: ListView.builder(
+                itemCount: _logs.length,
+                itemBuilder: (context, index) {
+                  return Text(
+                    _logs[index],
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -274,20 +277,6 @@ class _PipecatHomePageState extends State<PipecatHomePage> {
     );
   }
 
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    final seconds = duration.inSeconds.remainder(60);
-
-    if (hours > 0) {
-      return '${hours}h ${minutes}m ${seconds}s';
-    } else if (minutes > 0) {
-      return '${minutes}m ${seconds}s';
-    } else {
-      return '${seconds}s';
-    }
-  }
-
   Future<void> _connect() async {
     try {
       final endpoint = _endpointController.text.trim();
@@ -296,12 +285,16 @@ class _PipecatHomePageState extends State<PipecatHomePage> {
         return;
       }
 
-      await _pipecatClient.connect(
-        endpoint: endpoint,
-        enableMic: true,
-        enableCam: false,
-      );
+      setState(() {
+        _connecting = true;
+      });
+
+      await _pipecatClient.initDevices();
+      await _pipecatClient.connectWithEndpoint(endpoint);
     } catch (e) {
+      setState(() {
+        _connecting = false;
+      });
       _showError('Failed to connect: $e');
     }
   }
@@ -311,6 +304,19 @@ class _PipecatHomePageState extends State<PipecatHomePage> {
       await _pipecatClient.disconnect();
     } catch (e) {
       _showError('Failed to disconnect: $e');
+    }
+  }
+
+  Future<void> _toggleMic() async {
+    try {
+      final newState = !_micEnabled;
+      await _pipecatClient.enableMic(newState);
+      setState(() {
+        _micEnabled = newState;
+      });
+      _addLog(newState ? 'Microphone enabled' : 'Microphone disabled');
+    } catch (e) {
+      _showError('Failed to toggle microphone: $e');
     }
   }
 

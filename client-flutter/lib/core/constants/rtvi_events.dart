@@ -41,6 +41,9 @@ enum RTVIEvent {
   // TTS events
   botTTSText('botTTSText'),
 
+  // Audio events
+  botAudio('botAudio'),
+
   // Media device events
   availableCamsUpdated('availableCamsUpdated'),
   availableMicsUpdated('availableMicsUpdated'),

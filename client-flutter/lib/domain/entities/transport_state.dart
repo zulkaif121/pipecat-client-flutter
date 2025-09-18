@@ -10,8 +10,11 @@ part 'transport_state.freezed.dart';
 @freezed
 class TransportState with _$TransportState {
   const factory TransportState.disconnected() = _Disconnected;
+  const factory TransportState.initializing() = _Initializing;
+  const factory TransportState.initialized() = _Initialized;
   const factory TransportState.connecting() = _Connecting;
   const factory TransportState.connected() = _Connected;
+  const factory TransportState.disconnecting() = _Disconnecting;
   const factory TransportState.ready() = _Ready;
   const factory TransportState.error(String message) = _Error;
 }
@@ -21,8 +24,11 @@ extension TransportStateExtension on TransportState {
   String get value {
     return when(
       disconnected: () => 'disconnected',
-      connecting: () => 'connecting', 
+      initializing: () => 'initializing',
+      initialized: () => 'initialized',
+      connecting: () => 'connecting',
       connected: () => 'connected',
+      disconnecting: () => 'disconnecting',
       ready: () => 'ready',
       error: (message) => 'error',
     );
@@ -33,4 +39,9 @@ extension TransportStateExtension on TransportState {
   bool get isConnecting => this is _Connecting;
   bool get isReady => this is _Ready;
   bool get isError => this is _Error;
+
+  String? get error => maybeWhen(
+    error: (message) => message,
+    orElse: () => null,
+  );
 }

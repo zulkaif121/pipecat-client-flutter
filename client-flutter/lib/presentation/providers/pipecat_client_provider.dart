@@ -3,8 +3,10 @@
 /// SPDX-License-Identifier: BSD-2-Clause
 
 import 'package:flutter/foundation.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import '../../data/datasources/transport.dart';
+import '../../data/repositories/pipecat_client_repository_impl.dart';
 import '../../domain/entities/participant.dart';
 import '../../domain/entities/rtvi_message.dart';
 import '../../domain/entities/transport_state.dart';
@@ -12,9 +14,9 @@ import '../../domain/repositories/pipecat_client_repository.dart';
 import '../../domain/usecases/connect_to_bot.dart';
 import '../../domain/usecases/disconnect_from_bot.dart';
 import '../../domain/usecases/send_message.dart';
+import '../../domain/usecases/send_action.dart';
 import '../../core/usecases/usecase.dart';
 import '../../core/constants/rtvi_events.dart';
-import '../../core/errors/rtvi_error.dart';
 
 /// Provider for managing Pipecat client state and operations
 class PipecatClientProvider extends ChangeNotifier {
@@ -51,6 +53,7 @@ class PipecatClientProvider extends ChangeNotifier {
   bool get isConnecting => _isConnecting;
   bool get isConnected => _repository.isConnected;
   bool get isBotReady => _repository.isBotReady;
+  bool get isMicEnabled => _repository.isMicEnabled;
 
   // Streams
   Stream<TransportState> get transportStateStream => _repository.transportStateStream;
@@ -192,7 +195,7 @@ class PipecatClientProvider extends ChangeNotifier {
   }
 
   /// Get available microphone devices
-  Future<List<MediaDevice>> getAvailableMics() async {
+  Future<List<MediaDeviceInfo>> getAvailableMics() async {
     try {
       return await _repository.getAvailableMics();
     } catch (e) {
@@ -203,7 +206,7 @@ class PipecatClientProvider extends ChangeNotifier {
   }
 
   /// Get available camera devices
-  Future<List<MediaDevice>> getAvailableCams() async {
+  Future<List<MediaDeviceInfo>> getAvailableCams() async {
     try {
       return await _repository.getAvailableCams();
     } catch (e) {
@@ -235,13 +238,30 @@ class PipecatClientProvider extends ChangeNotifier {
     }
   }
 
+  /// Get audio playback stream (only available with WebSocketAudioTransport)
+  Stream<bool>? get audioPlaybackStream {
+    if (_repository is PipecatClientRepositoryImpl) {
+      return (_repository as PipecatClientRepositoryImpl).audioPlaybackStream;
+    }
+    return null;
+  }
+
+  /// Check if audio is currently playing (only available with WebSocketAudioTransport)
+  bool get isAudioPlaying {
+    if (_repository is PipecatClientRepositoryImpl) {
+      return (_repository as PipecatClientRepositoryImpl).isAudioPlaying;
+    }
+    return false;
+  }
+
   /// Clear error message
   void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
 
-  void _handleEvent(RTVIEventData eventData) {
+  void _handleEvent(RTVIEventData? eventData) {
+    if (eventData == null) return;
     // Handle specific events that might require UI updates
     switch (eventData.event) {
       case RTVIEvent.error:

@@ -12,9 +12,9 @@ part 'rtvi_message_model.g.dart';
 @freezed
 class RTVIMessageModel with _$RTVIMessageModel {
   const factory RTVIMessageModel({
-    required String id,
-    required String type,
-    required Map<String, dynamic> data,
+    String? id,
+    String? type,
+    @Default({}) Map<String, dynamic> data,
     String? requestId,
     @Default(false) bool isResponse,
   }) = _RTVIMessageModel;

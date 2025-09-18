@@ -2,10 +2,13 @@
 /// 
 /// SPDX-License-Identifier: BSD-2-Clause
 
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+
+import '../../data/datasources/transport.dart';
 import '../entities/participant.dart';
 import '../entities/rtvi_message.dart';
 import '../entities/transport_state.dart';
-import '../../core/constants/rtvi_events.dart';
+// Removed unused import: '../../core/constants/rtvi_events.dart';
 
 /// Repository interface for Pipecat client operations
 abstract class PipecatClientRepository {
@@ -57,6 +60,9 @@ abstract class PipecatClientRepository {
   /// Check if bot is ready
   bool get isBotReady;
 
+  /// Check if microphone is currently enabled
+  bool get isMicEnabled;
+
   /// Enable or disable microphone
   Future<void> enableMic(bool enable);
 
@@ -64,10 +70,10 @@ abstract class PipecatClientRepository {
   Future<void> enableCam(bool enable);
 
   /// Get available microphone devices
-  Future<List<MediaDevice>> getAvailableMics();
+  Future<List<MediaDeviceInfo>> getAvailableMics();
 
   /// Get available camera devices
-  Future<List<MediaDevice>> getAvailableCams();
+  Future<List<MediaDeviceInfo>> getAvailableCams();
 
   /// Set active microphone device
   Future<void> setMic(String deviceId);
@@ -79,26 +85,3 @@ abstract class PipecatClientRepository {
   Future<void> dispose();
 }
 
-/// Data class for RTVI events
-class RTVIEventData {
-  RTVIEventData({
-    required this.event,
-    this.data,
-  });
-
-  final RTVIEvent event;
-  final Map<String, dynamic>? data;
-}
-
-/// Represents a media device (microphone or camera)
-class MediaDevice {
-  MediaDevice({
-    required this.id,
-    required this.label,
-    required this.kind,
-  });
-
-  final String id;
-  final String label;
-  final String kind; // 'audioinput', 'videoinput'
-}

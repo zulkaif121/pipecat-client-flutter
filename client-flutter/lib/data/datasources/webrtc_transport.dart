@@ -1,10 +1,9 @@
 /// Copyright (c) 2024, Pipecat AI.
-/// 
+///
 /// SPDX-License-Identifier: BSD-2-Clause
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:html' as html;
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -17,9 +16,9 @@ import '../../core/constants/rtvi_events.dart';
 import '../../core/errors/rtvi_error.dart';
 import 'transport.dart';
 
-/// WebRTC transport implementation for Flutter web
-class WebRTCTransport extends Transport {
-  WebRTCTransport() {
+/// WebSocket transport implementation for Flutter (audio-only)
+class WebSocketTransport extends Transport {
+  WebSocketTransport() {
     _logger = Logger();
     _stateController = BehaviorSubject<TransportState>.seeded(
       const TransportState.disconnected(),
@@ -33,13 +32,10 @@ class WebRTCTransport extends Transport {
   late final StreamController<RTVIMessageModel> _messageController;
   late final StreamController<RTVIEventData> _eventController;
 
-  RTCPeerConnection? _peerConnection;
   WebSocketChannel? _webSocketChannel;
   MediaStream? _localStream;
-  MediaStream? _remoteStream;
-  
+
   bool _micEnabled = true;
-  bool _camEnabled = false;
 
   @override
   TransportState get state => _stateController.value;
@@ -60,13 +56,9 @@ class WebRTCTransport extends Transport {
   }) async {
     try {
       _micEnabled = enableMic;
-      _camEnabled = enableCam;
 
-      // Initialize WebRTC
-      await _initializeWebRTC();
-
-      // Request user media
-      if (enableMic || enableCam) {
+      // Request user media for audio only
+      if (enableMic) {
         await _getUserMedia();
       }
 
@@ -86,14 +78,14 @@ class WebRTCTransport extends Transport {
     try {
       _updateState(const TransportState.connecting());
 
-      // Connect WebSocket for signaling
+      // Connect WebSocket
       await _connectWebSocket(endpoint, params);
-
-      // Wait for connection to be established
-      await _waitForConnection();
 
       _updateState(const TransportState.connected());
       _emitEvent(RTVIEvent.connected);
+
+      // Send initial messages to match Twilio protocol
+      await _sendInitialMessages();
 
       _logger.i('Connected to $endpoint');
     } catch (e) {
@@ -109,10 +101,6 @@ class WebRTCTransport extends Transport {
       // Close WebSocket
       await _webSocketChannel?.sink.close();
       _webSocketChannel = null;
-
-      // Close peer connection
-      await _peerConnection?.close();
-      _peerConnection = null;
 
       // Stop local stream
       _localStream?.getTracks().forEach((track) => track.stop());
@@ -147,30 +135,20 @@ class WebRTCTransport extends Transport {
   @override
   Future<void> enableMic(bool enable) async {
     _micEnabled = enable;
-    
+
     if (_localStream != null) {
       final audioTracks = _localStream!.getAudioTracks();
       for (final track in audioTracks) {
         track.enabled = enable;
       }
     }
-    
+
     _emitEvent(RTVIEvent.micUpdated, {'enabled': enable});
   }
 
   @override
-  Future<void> enableCam(bool enable) async {
-    _camEnabled = enable;
-    
-    if (_localStream != null) {
-      final videoTracks = _localStream!.getVideoTracks();
-      for (final track in videoTracks) {
-        track.enabled = enable;
-      }
-    }
-    
-    _emitEvent(RTVIEvent.camUpdated, {'enabled': enable});
-  }
+  bool get isMicEnabled => _micEnabled;
+
 
   @override
   Future<List<MediaDeviceInfo>> getAvailableMics() async {
@@ -178,11 +156,6 @@ class WebRTCTransport extends Transport {
       final devices = await navigator.mediaDevices.enumerateDevices();
       return devices
           .where((device) => device.kind == 'audioinput')
-          .map((device) => MediaDeviceInfo(
-                deviceId: device.deviceId!,
-                label: device.label!,
-                kind: device.kind!,
-              ))
           .toList();
     } catch (e) {
       _logger.e('Failed to get microphones: $e');
@@ -190,23 +163,6 @@ class WebRTCTransport extends Transport {
     }
   }
 
-  @override
-  Future<List<MediaDeviceInfo>> getAvailableCams() async {
-    try {
-      final devices = await navigator.mediaDevices.enumerateDevices();
-      return devices
-          .where((device) => device.kind == 'videoinput')
-          .map((device) => MediaDeviceInfo(
-                deviceId: device.deviceId!,
-                label: device.label!,
-                kind: device.kind!,
-              ))
-          .toList();
-    } catch (e) {
-      _logger.e('Failed to get cameras: $e');
-      return [];
-    }
-  }
 
   @override
   Future<void> setMic(String deviceId) async {
@@ -216,11 +172,19 @@ class WebRTCTransport extends Transport {
   }
 
   @override
-  Future<void> setCam(String deviceId) async {
-    // Implementation for switching camera
-    _logger.i('Switching to camera: $deviceId');
-    // This would require re-initializing the media stream with specific device
+  Future<void> startRecording() async {
+    _logger.w('Audio recording not implemented in basic WebSocket transport');
+    // No-op for basic transport - audio streaming implemented in WebSocketAudioTransport
   }
+
+  @override
+  Future<void> stopRecording() async {
+    _logger.w('Audio recording not implemented in basic WebSocket transport');
+    // No-op for basic transport - audio streaming implemented in WebSocketAudioTransport
+  }
+
+  @override
+  bool get isRecording => false; // Not supported in basic transport
 
   @override
   Future<void> dispose() async {
@@ -232,43 +196,14 @@ class WebRTCTransport extends Transport {
 
   // Private helper methods
 
-  Future<void> _initializeWebRTC() async {
-    final configuration = {
-      'iceServers': [
-        {'urls': 'stun:stun.l.google.com:19302'},
-      ]
-    };
-
-    _peerConnection = await createPeerConnection(configuration);
-
-    _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
-      _sendSignalingMessage({
-        'type': 'ice-candidate',
-        'candidate': candidate.toMap(),
-      });
-    };
-
-    _peerConnection!.onTrack = (RTCTrackEvent event) {
-      _remoteStream = event.streams[0];
-      _emitEvent(RTVIEvent.trackStarted, {
-        'track': event.track,
-        'stream': event.streams[0],
-      });
-    };
-  }
-
   Future<void> _getUserMedia() async {
     final constraints = {
       'audio': _micEnabled,
-      'video': _camEnabled,
+      'video': false,
     };
 
     _localStream = await navigator.mediaDevices.getUserMedia(constraints);
-
-    // Add tracks to peer connection
-    _localStream!.getTracks().forEach((track) {
-      _peerConnection!.addTrack(track, _localStream!);
-    });
+    _logger.i('Got user media (audio only)');
   }
 
   Future<void> _connectWebSocket(String endpoint, Map<String, dynamic>? params) async {
@@ -323,15 +258,39 @@ class WebRTCTransport extends Transport {
     }
   }
 
-  Future<void> _sendSignalingMessage(Map<String, dynamic> message) async {
+  Future<void> _sendRawMessage(Map<String, dynamic> message) async {
     if (_webSocketChannel != null) {
       _webSocketChannel!.sink.add(jsonEncode(message));
+      _logger.d('Sent raw message: ${message['event']}');
     }
   }
 
-  Future<void> _waitForConnection() async {
-    // Wait for connection to be established
-    await Future.delayed(const Duration(seconds: 2));
+
+  Future<void> _sendInitialMessages() async {
+    try {
+      // Send "connected" message to match Twilio protocol
+      await _sendRawMessage({
+        'event': 'connected',
+        'protocol': 'Call',
+        'version': '1.0.0',
+      });
+
+      // Wait a bit before sending start message
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Send "start" message to match Twilio protocol
+      await _sendRawMessage({
+        'event': 'start',
+        'start': {
+          'streamSid': 'test_stream_sid',
+          'callSid': 'test_call_sid',
+        },
+      });
+
+      _logger.i('Initial messages sent to match Twilio protocol');
+    } catch (e) {
+      _logger.e('Failed to send initial messages: $e');
+    }
   }
 
   void _updateState(TransportState newState) {

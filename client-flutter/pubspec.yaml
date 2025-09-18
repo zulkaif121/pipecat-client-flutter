@@ -18,10 +18,11 @@ dependencies:
   web_socket_channel: ^2.4.0
   
   # Real-time Communication
-  flutter_webrtc: ^0.10.7
+  flutter_webrtc: ^1.2.0
   
   # Audio/Video
   permission_handler: ^11.0.1
+  universal_html: ^2.2.4
   
   # Utilities
   uuid: ^4.1.0

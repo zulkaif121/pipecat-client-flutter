@@ -18,20 +18,7 @@ class SendMessage implements UseCase<void, SendMessageParams> {
   }
 }
 
-/// Use case for sending actions to the bot
-class SendAction implements UseCase<void, SendActionParams> {
-  SendAction(this._repository);
 
-  final PipecatClientRepository _repository;
-
-  @override
-  Future<void> call(SendActionParams params) async {
-    await _repository.sendAction(
-      action: params.action,
-      data: params.data,
-    );
-  }
-}
 
 /// Parameters for sending a message
 class SendMessageParams {
@@ -40,13 +27,3 @@ class SendMessageParams {
   final RTVIMessage message;
 }
 
-/// Parameters for sending an action
-class SendActionParams {
-  SendActionParams({
-    required this.action,
-    this.data,
-  });
-  
-  final String action;
-  final Map<String, dynamic>? data;
-}
