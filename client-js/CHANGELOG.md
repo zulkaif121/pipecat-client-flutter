@@ -5,6 +5,16 @@ All notable changes to **Pipecat Client JS** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added new `sendText()` method to support the new RTVI `send-text` event. The method takes a string, along with an optional set of options to control whether the bot should respond immediately and/or whether the bot should respond with audio (vs. text only). Note: This is a replacement for the current `appendToContext()` method and changes the default of `run_immediately` to `True`.
+
+### Deprecated
+
+- Deprecated `appendToContext()` in lieu of the new `sendText()` method. This sets a standard for future methods like `sendImage()`.
+
 ## [1.3.0]
 
 ### Added
