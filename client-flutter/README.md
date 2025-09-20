@@ -1,12 +1,15 @@
 # Pipecat Flutter Client
 
-A minimal Flutter library for connecting to Pipecat AI voice agents, inspired by the architecture of `pipecat-client-web` and `naturalflow-website-official` test client.
+A Flutter library for connecting to Pipecat AI voice agents with **full audio streaming support**. Uses native Flutter packages for cross-platform audio recording and playback.
 
-## Features
+## ✅ Features
 
 - **WebSocket Transport**: Real-time bidirectional communication with Pipecat backend
-- **Twilio Serialization**: Compatible with Twilio media streaming format
-- **Audio Streaming**: Real-time audio capture and playback
+- **Twilio Serialization**: Compatible with Twilio media streaming format  
+- **Cross-Platform Audio**: Native audio recording and playback on web, iOS, and Android
+- **Native Flutter Packages**: Uses `record`, `flutter_sound`, and `web_socket_channel`
+- **PCM Audio Streaming**: 8kHz PCM16 → μ-law conversion for optimal compatibility
+- **Memory Safe**: Robust error handling and resource management
 - **State Management**: Provider-based state management for easy integration
 - **Clean Architecture**: Follows pipecat-client-web patterns
 
@@ -89,15 +92,13 @@ A complete example widget that demonstrates the library usage:
 TwilioExample() // Shows configuration UI, connection controls, and debug logs
 ```
 
-### AudioTestWidget
+### Simple Configuration
 
-A simpler widget for testing audio connections:
+The example widget uses a single WebSocket URL field for easy configuration:
 
 ```dart
-AudioTestWidget(
-  agentId: 'your-agent-id',
-  baseUrl: 'ws://localhost:8000',
-)
+// Just provide the complete WebSocket URL
+TwilioExample() // UI allows entering: ws://localhost:8000/ws/test/demo
 ```
 
 ## Event Handling
@@ -164,9 +165,68 @@ For iOS, add to `ios/Runner/Info.plist`:
 <string>This app needs microphone access to communicate with voice agents</string>
 ```
 
+## 🔧 Technical Details
+
+### Native Flutter Audio Pipeline
+Uses native Flutter packages for cross-platform audio handling:
+
+```dart
+// ✅ Native Flutter packages (no JavaScript dependencies)
+Future<void> _startMicrophoneRecording() async {
+  // Configure native recording
+  const recordConfig = RecordConfig(
+    encoder: AudioEncoder.pcm16bits,
+    sampleRate: 8000,  // Matches TypeScript example
+    numChannels: 1,
+    autoGain: true,
+    echoCancel: true,
+    noiseSuppress: true,
+  );
+
+  // Start native PCM stream
+  final stream = await _audioRecorder!.startStream(recordConfig);
+  _recordingSubscription = stream.listen((audioData) {
+    _sendAudioData(audioData); // Direct PCM16 → μ-law → WebSocket
+  });
+}
+```
+
+### Key Packages Used
+- ✅ **record**: Native microphone recording to PCM stream
+- ✅ **flutter_sound**: Native PCM audio playback 
+- ✅ **web_socket_channel**: WebSocket communication
+- ✅ **permission_handler**: Cross-platform permission requests
+
+### Audio Flow
+1. **Microphone** → `record` package → PCM16 stream → μ-law → WebSocket
+2. **WebSocket** → μ-law → PCM16 → `flutter_sound` → Speakers  
+3. **Cross-platform**: Works on web, iOS, and Android with same code
+4. **8kHz sample rate**: Optimized for voice communication
+
+### Robustness Features
+- **Memory Protection**: Audio queue size limits prevent memory overflow
+- **Error Isolation**: Individual audio chunk failures don't break the stream
+- **Resource Cleanup**: Proper disposal of subscriptions and audio components
+- **Input Validation**: Empty audio data and null checks
+- **Safe Operations**: Try-catch blocks around critical audio operations
+
+## 🚀 Getting Started
+
+1. **Clone and run the example**:
+   ```bash
+   cd example
+   flutter run -d chrome
+   ```
+
+2. **Test with your endpoint**:
+   - Enter your WebSocket URL (e.g., `ws://localhost:8000/ws/test/agent-id`)
+   - Click "Connect" 
+   - Allow microphone permissions
+   - Start talking - you should now hear the bot respond! 🎉
+
 ## Example Usage
 
-See the example app for a complete implementation similar to the naturalflow-website test client.
+See the example app (`example/lib/main.dart`) for a complete implementation similar to the naturalflow-website test client.
 
 ## License
 

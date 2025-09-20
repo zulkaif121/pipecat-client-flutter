@@ -13,6 +13,11 @@ dependencies:
   # Essential only - following pipecat-client-web approach exactly
   web_socket_channel: ^2.4.0    # WebSocket transport
   
+  # Audio recording and playback (mobile support)
+  record: ^5.0.4                 # Microphone recording to PCM stream
+  flutter_sound: ^9.2.13        # PCM stream playback
+  permission_handler: ^11.0.1    # Audio permissions
+  
   # State management
   provider: ^6.0.5
 

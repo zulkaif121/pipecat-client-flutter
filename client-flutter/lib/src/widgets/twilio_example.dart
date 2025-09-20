@@ -21,25 +21,21 @@ class TwilioExample extends StatefulWidget {
 
 class _TwilioExampleState extends State<TwilioExample> {
   late PipecatProvider _provider;
-  final TextEditingController _agentIdController = TextEditingController();
-  final TextEditingController _baseUrlController = TextEditingController();
+  final TextEditingController _wsUrlController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _provider = PipecatProvider();
     
-    // Set default values
-    _agentIdController.text = 'test';
-    _baseUrlController.text = 'ws://localhost:8000';
+    // Set default complete WebSocket URL
+    _wsUrlController.text = 'ws://localhost:8000/ws/test/demo';
     
     _initializeClient();
   }
 
   void _initializeClient() {
-    final agentId = _agentIdController.text.isEmpty ? 'test' : _agentIdController.text;
-    final baseUrl = _baseUrlController.text.isEmpty ? 'ws://localhost:8000' : _baseUrlController.text;
-    final wsUrl = '$baseUrl/ws/test/$agentId';
+    final wsUrl = _wsUrlController.text.isEmpty ? 'ws://localhost:8000/ws/test/demo' : _wsUrlController.text;
 
     final transport = WebSocketTransport(
       WebSocketTransportOptions(
@@ -62,8 +58,7 @@ class _TwilioExampleState extends State<TwilioExample> {
   @override
   void dispose() {
     _provider.dispose();
-    _agentIdController.dispose();
-    _baseUrlController.dispose();
+    _wsUrlController.dispose();
     super.dispose();
   }
 
@@ -122,30 +117,12 @@ class _TwilioExampleState extends State<TwilioExample> {
           ),
           const SizedBox(height: 12),
           TextField(
-            controller: _baseUrlController,
+            controller: _wsUrlController,
             style: const TextStyle(color: Color(0xFFE0E6F1)),
             decoration: const InputDecoration(
-              labelText: 'Base URL',
+              labelText: 'WebSocket URL',
               labelStyle: TextStyle(color: Color(0xFF94A3B8)),
-              hintText: 'ws://localhost:8000',
-              hintStyle: TextStyle(color: Color(0xFF64748B)),
-              border: OutlineInputBorder(),
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFF334155)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFF3B82F6)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _agentIdController,
-            style: const TextStyle(color: Color(0xFFE0E6F1)),
-            decoration: const InputDecoration(
-              labelText: 'Agent ID',
-              labelStyle: TextStyle(color: Color(0xFF94A3B8)),
-              hintText: 'test',
+              hintText: 'ws://localhost:8000/ws/test/demo',
               hintStyle: TextStyle(color: Color(0xFF64748B)),
               border: OutlineInputBorder(),
               enabledBorder: OutlineInputBorder(
@@ -346,7 +323,7 @@ class _TwilioExampleState extends State<TwilioExample> {
             ),
           ),
           const SizedBox(height: 8),
-          _buildInstruction('1. Configure your base URL and agent ID above'),
+          _buildInstruction('1. Configure your complete WebSocket URL above'),
           _buildInstruction('2. Tap the call button to connect to your agent'),
           _buildInstruction('3. Allow microphone access when prompted'),
           _buildInstruction('4. Start speaking - your agent will respond with voice'),

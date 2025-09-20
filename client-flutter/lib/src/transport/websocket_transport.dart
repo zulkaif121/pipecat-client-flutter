@@ -3,10 +3,12 @@
 /// SPDX-License-Identifier: BSD-2-Clause
 
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'dart:html' as html;
-import 'dart:js' as js;
+import 'package:record/record.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../models/rtvi_message.dart';
 import '../models/transport_state.dart';
@@ -22,8 +24,8 @@ class WebSocketTransportOptions {
   const WebSocketTransportOptions({
     required this.wsUrl,
     this.serializer,
-    this.recorderSampleRate = 16000,
-    this.playerSampleRate = 24000,
+    this.recorderSampleRate = 8000,  // CRITICAL: Match TypeScript example
+    this.playerSampleRate = 8000,    // CRITICAL: Match TypeScript example
   });
 }
 
@@ -34,23 +36,16 @@ class WebSocketTransport {
   final WebSocketTransportOptions options;
   late final WebSocketSerializer _serializer;
 
-  // Simple audio components (copying web client exactly)
-  html.AudioElement? _audioElement;
-  html.MediaStream? _localStream;
-  js.JsObject? _audioContext;
-  js.JsObject? _gainNode;
-
-  // Microphone recording components
-  js.JsObject? _recorderContext;
-  js.JsObject? _micSource;
-  js.JsObject? _scriptProcessor;
-
+  // Flutter packages for audio handling
+  AudioRecorder? _audioRecorder;
+  FlutterSoundPlayer? _audioPlayer;
+  
   bool _isMicEnabled = false;
   final List<Uint8List> _audioQueue = [];
-
-  // Audio streaming for continuous playback
-  final List<double> _audioBuffer = [];
-  Timer? _audioTimer;
+  StreamSubscription<Uint8List>? _recordingSubscription;
+  
+  // Audio queue protection
+  static const int maxAudioQueueSize = 100; // Prevent memory overflow
 
   // Callbacks
   PipecatClientOptions? _clientOptions;
@@ -76,37 +71,29 @@ class WebSocketTransport {
     _state = TransportState.initializing;
 
     try {
-      if (kIsWeb) {
-        // Create audio element for playback (exactly like web client)
-        _audioElement = html.AudioElement();
-        _audioElement!.autoplay = true;
-        html.document.body!.append(_audioElement!);
-
-        // Initialize AudioContext for PCM audio playback
-        _audioContext = js.JsObject(js.context['AudioContext']);
-        _gainNode = _audioContext!.callMethod('createGain');
-        _gainNode!.callMethod('connect', [_audioContext!['destination']]);
-
-        // Start continuous audio playback
-        _startContinuousPlayback();
-
-        // Get user media for microphone (exactly like web client)
-        _localStream = await html.window.navigator.mediaDevices!.getUserMedia({
-          'audio': {
-            'sampleRate': options.recorderSampleRate,
-            'channelCount': 1,
-            'echoCancellation': true,
-            'noiseSuppression': true,
-          },
-          'video': false,
-        });
-
-        // Setup microphone recording
-        _setupMicrophoneRecording();
-      } else {
-        throw Exception('Mobile not implemented yet');
+      // Request microphone permission
+      final micPermission = await Permission.microphone.request();
+      if (micPermission != PermissionStatus.granted) {
+        throw Exception('Microphone permission not granted');
       }
 
+      // Initialize audio recorder
+      _audioRecorder = AudioRecorder();
+      
+      // Initialize audio player for PCM stream playback
+      _audioPlayer = FlutterSoundPlayer();
+      await _audioPlayer!.openPlayer();
+      
+      // Start player session for feeding audio stream
+      await _audioPlayer!.startPlayerFromStream(
+        codec: Codec.pcm16,
+        sampleRate: options.playerSampleRate,
+        numChannels: 1,
+        bufferSize: 4096,
+        interleaved: true,
+      );
+
+      print('Audio devices initialized successfully');
       _state = TransportState.initialized;
     } catch (e) {
       _state = TransportState.error;
@@ -158,20 +145,28 @@ class WebSocketTransport {
 
     await enableMic(false);
 
-    if (kIsWeb) {
-      _stopMicrophoneRecording();
-      _localStream?.getTracks().forEach((track) => track.stop());
-      _audioElement?.remove();
-      _audioElement = null;
-      _localStream = null;
-      _audioTimer?.cancel();
-      _audioTimer = null;
-      _audioBuffer.clear();
-      _recorderContext = null;
-      _micSource = null;
+    // Stop recording and close audio components
+    await _recordingSubscription?.cancel();
+    _recordingSubscription = null;
+    
+    // Clear audio queue to free memory
+    _audioQueue.clear();
+    
+    // Close audio player safely
+    try {
+      await _audioPlayer?.closePlayer();
+    } catch (e) {
+      print('Warning: Error closing audio player: $e');
     }
+    _audioPlayer = null;
+    _audioRecorder = null;
 
-    await _channel?.sink.close();
+    // Close WebSocket safely
+    try {
+      await _channel?.sink.close();
+    } catch (e) {
+      print('Warning: Error closing WebSocket: $e');
+    }
     _channel = null;
 
     _state = TransportState.disconnected;
@@ -184,76 +179,51 @@ class WebSocketTransport {
 
     _isMicEnabled = enable;
 
-    if (kIsWeb && _localStream != null) {
-      final audioTracks = _localStream!.getAudioTracks();
-      for (final track in audioTracks) {
-        track.enabled = enable;
-      }
-
-      if (enable) {
-        _startMicrophoneRecording();
-      } else {
-        _stopMicrophoneRecording();
-      }
-
-      print('Microphone ${enable ? 'enabled' : 'disabled'}');
+    if (enable) {
+      await _startMicrophoneRecording();
+    } else {
+      await _stopMicrophoneRecording();
     }
+
+    print('Microphone ${enable ? 'enabled' : 'disabled'}');
   }
 
-  void _setupMicrophoneRecording() {
-    if (!kIsWeb || _localStream == null) return;
+  Future<void> _startMicrophoneRecording() async {
+    if (_audioRecorder == null) return;
 
     try {
-      // Create AudioContext for recording
-      _recorderContext = js.JsObject(
-        js.context['AudioContext'],
-        [js.JsObject.jsify({'sampleRate': options.recorderSampleRate})],
+      // Check if the recorder has permission
+      if (!await _audioRecorder!.hasPermission()) {
+        throw Exception('Recording permission not granted');
+      }
+
+      // Configure recording to capture PCM stream - MATCH TypeScript example exactly
+      final recordConfig = RecordConfig(
+        encoder: AudioEncoder.pcm16bits,
+        sampleRate: options.recorderSampleRate,  // Now defaults to 8000 to match TypeScript
+        numChannels: 1,
+        autoGain: true,
+        echoCancel: true,
+        noiseSuppress: true,
       );
 
-      // ✅ Use the full MediaStream instead of creating a new one
-      _micSource = _recorderContext!.callMethod(
-        'createMediaStreamSource',
-        [_localStream],
-      );
-
-      print('Microphone recording setup complete');
-    } catch (e) {
-      print('Failed to setup microphone recording: $e');
-    }
-  }
-
-  void _startMicrophoneRecording() {
-    if (!kIsWeb || _recorderContext == null || _micSource == null) return;
-
-    try {
-      const bufferSize = 4096;
-      _scriptProcessor = _recorderContext!.callMethod('createScriptProcessor', [bufferSize, 1, 1]);
-
-      _scriptProcessor!['onaudioprocess'] = js.allowInterop((js.JsObject event) {
-        final inputBuffer = event['inputBuffer'];
-        final channelData = inputBuffer.callMethod('getChannelData', [0]);
-
-        final samples = <int>[];
-        final length = inputBuffer['length'];
-
-        for (int i = 0; i < length; i++) {
-          final sample = channelData[i] as double;
-          final pcm16Sample = (sample * 32767).round().clamp(-32768, 32767);
-          samples.add(pcm16Sample & 0xFF);
-          samples.add((pcm16Sample >> 8) & 0xFF);
-        }
-
-        if (samples.isNotEmpty && _state == TransportState.ready) {
-          final audioData = Uint8List.fromList(samples);
+      // Start recording with stream
+      final stream = await _audioRecorder!.startStream(recordConfig);
+      
+      _recordingSubscription = stream.listen((audioData) {
+        print('Received audio data: ${audioData.length} bytes, state: $_state');
+        if (_state == TransportState.ready) {
           _sendAudioData(audioData);
-        } else if (samples.isNotEmpty && _state != TransportState.ready) {
-          final audioData = Uint8List.fromList(samples);
+        } else {
+          // Protect against memory overflow
+          if (_audioQueue.length >= maxAudioQueueSize) {
+            print('Warning: Audio queue full, dropping oldest audio data');
+            _audioQueue.removeAt(0);
+          }
           _audioQueue.add(audioData);
+          print('Queued audio data, queue size: ${_audioQueue.length}');
         }
       });
-
-      _micSource!.callMethod('connect', [_scriptProcessor]);
-      _scriptProcessor!.callMethod('connect', [_recorderContext!['destination']]);
 
       print('Microphone recording started');
     } catch (e) {
@@ -261,12 +231,12 @@ class WebSocketTransport {
     }
   }
 
-  void _stopMicrophoneRecording() {
-    if (!kIsWeb) return;
-
+  Future<void> _stopMicrophoneRecording() async {
     try {
-      _scriptProcessor?.callMethod('disconnect');
-      _scriptProcessor = null;
+      await _recordingSubscription?.cancel();
+      _recordingSubscription = null;
+      
+      await _audioRecorder?.stop();
       print('Microphone recording stopped');
     } catch (e) {
       print('Error stopping microphone recording: $e');
@@ -274,13 +244,32 @@ class WebSocketTransport {
   }
 
   void _sendAudioData(Uint8List audioData) {
-    if (_channel != null) {
+    // Validate audio data
+    if (audioData.isEmpty) {
+      print('Warning: Received empty audio data, skipping');
+      return;
+    }
+    
+    if (_channel == null) {
+      print('Cannot send audio: WebSocket channel is null');
+      return;
+    }
+    
+    try {
+      print('Sending audio data: ${audioData.length} bytes');
+      
+      // The record package gives us raw PCM16 bytes, which is what the web client uses
+      // No conversion needed - the TwilioSerializer will handle PCM16 to μ-law conversion
       final serialized = _serializer.serializeAudio(
         audioData,
         options.recorderSampleRate,
         1,
       );
       _channel?.sink.add(serialized);
+      print('Audio data sent via WebSocket');
+    } catch (e) {
+      print('Error sending audio data: $e');
+      // Don't rethrow - continue with other audio chunks
     }
   }
 
@@ -292,10 +281,40 @@ class WebSocketTransport {
   }
 
   void sendReadyMessage() {
+    print('Setting transport state to ready');
     _state = TransportState.ready;
     _clientOptions?.callbacks?.onTransportStateChanged(_state);
+    
+    // Emulate Twilio messages like the working TypeScript example
+    _emulateTwilioMessages();
+    
     sendMessage(RTVIMessage.clientReady());
+    print('Flushing audio queue with ${_audioQueue.length} items');
     _flushAudioQueue();
+  }
+
+  void _emulateTwilioMessages() {
+    print('Emulating Twilio messages for backend compatibility');
+    
+    // Send connected message
+    final connectedMessage = {
+      'event': 'connected',
+      'protocol': 'Call',
+      'version': '1.0.0',
+    };
+    sendRawMessage(connectedMessage);
+    print('Sent Twilio connected message');
+    
+    // Send start message
+    final startMessage = {
+      'event': 'start',
+      'start': {
+        'streamSid': 'test_stream_sid',
+        'callSid': 'test_call_sid',
+      },
+    };
+    sendRawMessage(startMessage);
+    print('Sent Twilio start message');
   }
 
   void sendMessage(RTVIMessage message) {
@@ -330,83 +349,14 @@ class WebSocketTransport {
     }
   }
 
-  void setupAudioTrack(html.MediaStreamTrack track) {
-    print('Setting up audio track');
-    if (kIsWeb && _audioElement != null) {
-      if (_audioElement!.srcObject != null) {
-        final stream = _audioElement!.srcObject as html.MediaStream;
-        final tracks = stream.getAudioTracks();
-        if (tracks.isNotEmpty && tracks.first.id == track.id) return;
-      }
-
-      _audioElement!.srcObject = html.MediaStream([track]);
-      _audioElement!.volume = 1.0;
-      _audioElement!.muted = false;
-      _audioElement!.play().catchError((e) {
-        print('Audio play failed: $e');
-      });
-      print('Audio track setup complete');
-    }
-  }
-
   Future<void> _playAudio(Uint8List audioData) async {
     try {
-      if (kIsWeb) {
-        final samples = _bytesToFloatSamples(audioData);
-        _audioBuffer.addAll(samples);
-      } else {
-        print('Received audio data: ${audioData.length} bytes');
-        print('Audio playback not implemented for non-web platforms');
+      if (_audioPlayer != null) {
+        // Use flutter_sound to play PCM audio data directly
+        await _audioPlayer!.feedUint8FromStream(audioData);
       }
     } catch (e) {
       print('Audio playback error: $e');
-    }
-  }
-
-  List<double> _bytesToFloatSamples(Uint8List bytes) {
-    final samples = <double>[];
-    for (int i = 0; i < bytes.length; i += 2) {
-      if (i + 1 < bytes.length) {
-        final sample = bytes[i] | (bytes[i + 1] << 8);
-        final signed = sample > 32767 ? sample - 65536 : sample;
-        samples.add(signed / 32768.0);
-      }
-    }
-    return samples;
-  }
-
-  void _startContinuousPlayback() {
-    const chunkSize = 1024;
-    const intervalMs = (chunkSize * 1000) ~/ 8000;
-
-    _audioTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
-      if (_audioBuffer.length >= chunkSize) {
-        _playAudioChunk(chunkSize);
-      }
-    });
-  }
-
-  void _playAudioChunk(int chunkSize) {
-    try {
-      final samplesToPlay = _audioBuffer.take(chunkSize).toList();
-      _audioBuffer.removeRange(0, samplesToPlay.length);
-
-      if (samplesToPlay.isEmpty) return;
-
-      final buffer = _audioContext!.callMethod('createBuffer', [1, samplesToPlay.length, options.playerSampleRate]);
-      final channelData = buffer.callMethod('getChannelData', [0]);
-
-      for (int i = 0; i < samplesToPlay.length; i++) {
-        channelData[i] = samplesToPlay[i];
-      }
-
-      final source = _audioContext!.callMethod('createBufferSource');
-      source['buffer'] = buffer;
-      source.callMethod('connect', [_gainNode]);
-      source.callMethod('start');
-
-    } catch (e) {
-      print('Audio chunk playback error: $e');
     }
   }
 

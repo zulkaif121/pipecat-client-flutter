@@ -38,8 +38,11 @@ class TwilioSerializer implements WebSocketSerializer {
 
   @override
   dynamic serializeAudio(Uint8List audioData, int sampleRate, int channels) {
+    // Convert raw bytes to 16-bit PCM samples (like TypeScript Int16Array)
+    final pcmSamples = _bytesToInt16Array(audioData);
+    
     // Convert PCM16 to μ-law (exactly like TS client)
-    final muLawData = _pcm16ToMuLaw(audioData);
+    final muLawData = _pcm16SamplesToMuLaw(pcmSamples);
     final payload = base64Encode(muLawData);
     
     final message = {
@@ -197,5 +200,35 @@ class TwilioSerializer implements WebSocketSerializer {
     int muLaw = ~(sign | (exponent << 4) | mantissa);
     
     return muLaw & 0xFF;
+  }
+
+  /// Converts raw bytes from record package to Int16 array (like TypeScript Int16Array)
+  List<int> _bytesToInt16Array(Uint8List bytes) {
+    final samples = <int>[];
+    
+    // Process bytes in pairs to create 16-bit samples (little endian)
+    for (int i = 0; i < bytes.length; i += 2) {
+      if (i + 1 < bytes.length) {
+        // Combine two bytes into 16-bit sample (little endian)
+        final sample = bytes[i] | (bytes[i + 1] << 8);
+        // Convert unsigned to signed 16-bit
+        final signed = sample > 32767 ? sample - 65536 : sample;
+        samples.add(signed);
+      }
+    }
+    
+    return samples;
+  }
+
+  /// Converts PCM16 samples to μ-law (matching TypeScript mulaw.encode())
+  Uint8List _pcm16SamplesToMuLaw(List<int> pcmSamples) {
+    final muLawBytes = <int>[];
+    
+    for (final sample in pcmSamples) {
+      final muLawValue = _linearToMuLaw(sample);
+      muLawBytes.add(muLawValue);
+    }
+    
+    return Uint8List.fromList(muLawBytes);
   }
 }
