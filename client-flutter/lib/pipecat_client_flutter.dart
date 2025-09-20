@@ -4,15 +4,24 @@
 
 library pipecat_client_flutter;
 
-// Main client (simplified API matching official Pipecat SDK)
-export 'pipecat_client.dart';
+// Core exports
+export 'src/client/pipecat_client.dart';
+export 'src/client/pipecat_client_options.dart';
+export 'src/client/pipecat_events.dart';
 
-// Core exports (essential only)
-export 'core/constants/rtvi_events.dart';
-export 'core/errors/rtvi_error.dart';
+// Transport exports
+export 'src/transport/websocket_transport.dart';
+export 'src/transport/twilio_serializer.dart';
 
-// Transport layer (essential only)
-export 'data/datasources/transport.dart';
-export 'data/transports/websocket_audio_transport.dart';
-export 'data/models/rtvi_message_model.dart';
-export 'domain/entities/transport_state.dart';
+// State management exports
+export 'src/providers/pipecat_provider.dart';
+
+// Widget exports
+export 'src/widgets/audio_test_widget.dart';
+export 'src/widgets/twilio_example.dart';
+
+// Models
+export 'src/models/rtvi_message.dart';
+export 'src/models/transport_state.dart';
+export 'src/models/participant.dart';
+export 'src/models/transcript_data.dart';

@@ -9,40 +9,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # Essential only - following pipecat-client-web approach exactly
+  web_socket_channel: ^2.4.0    # WebSocket transport
   
-  # State Management
-  provider: ^6.1.1
-  
-  # Networking
-  http: ^1.1.0
-  web_socket_channel: ^2.4.0
-  
-  # Real-time Communication
-  flutter_webrtc: ^1.2.0
-  
-  # Audio/Video
-  permission_handler: ^11.0.1
-  universal_html: ^2.2.4
-  
-  # Utilities
-  uuid: ^4.1.0
-  logger: ^2.0.2+1
-  freezed_annotation: ^2.4.1
-  json_annotation: ^4.8.1
-  
-  # Event handling
-  rxdart: ^0.27.7
+  # State management
+  provider: ^6.0.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  
-  # Code Generation
-  build_runner: ^2.4.7
-  freezed: ^2.4.6
-  json_serializable: ^6.7.1
-  mockito: ^5.4.2
 
 flutter:
   uses-material-design: true
