@@ -1,6 +1,6 @@
-# Pipecat Flutter Client
+# Pipecat Client Flutter
 
-A Flutter library for connecting to Pipecat AI voice agents with **full audio streaming support**. Uses native Flutter packages for cross-platform audio recording and playback.
+A Flutter client library for real-time voice conversations with AI agents, compatible with [Pipecat](https://github.com/pipecat-ai/pipecat) framework. Built with native Flutter packages for cross-platform audio streaming support.
 
 ## ✅ Features
 
@@ -22,7 +22,9 @@ Add this to your `pubspec.yaml`:
 ```yaml
 dependencies:
   pipecat_client_flutter:
-    path: path/to/pipecat-client-flutter/client-flutter
+    git:
+      url: https://github.com/zulkaif121/pipecat-client-flutter.git
+      path: client-flutter
 ```
 
 ### 2. Basic Usage
@@ -227,6 +229,21 @@ Future<void> _startMicrophoneRecording() async {
 ## Example Usage
 
 See the example app (`example/lib/main.dart`) for a complete implementation similar to the naturalflow-website test client.
+
+## Contributing
+
+We welcome contributions to the Pipecat Client Flutter! Whether you've found a bug, have a feature idea, or want to improve documentation, we'd love to hear from you.
+
+- **Found a bug?** Open an [issue](https://github.com/pipecat-ai/pipecat-client-web/issues)
+- **Have a feature idea?** Start a [discussion](https://github.com/pipecat-ai/pipecat-client-web/discussions)
+- **Want to contribute code?** Check our [CONTRIBUTING.md](https://github.com/pipecat-ai/pipecat-client-web/blob/main/CONTRIBUTING.md) guide
+- **Documentation improvements?** Docs PRs are always welcome
+
+## Support
+
+- [Documentation](https://docs.pipecat.ai)
+- [Discord](https://discord.gg/pipecat)
+- [X (Twitter)](https://x.com/pipecat_ai)
 
 ## License
 
