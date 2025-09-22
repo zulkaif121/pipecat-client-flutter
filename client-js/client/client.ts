@@ -25,6 +25,7 @@ import {
   RTVIEvents,
   RTVIMessage,
   RTVIMessageType,
+  SendTextOptions,
   setAboutClient,
   TranscriptData,
   TransportState,
@@ -612,16 +613,25 @@ export class PipecatClient extends RTVIEventEmitter {
 
   @transportReady
   public async appendToContext(context: LLMContextMessage) {
-    const response = await this._messageDispatcher.dispatch(
-      {
+    logger.warn("appendToContext() is deprecated. Use sendText() instead.");
+    await this._transport.sendMessage(
+      new RTVIMessage(RTVIMessageType.APPEND_TO_CONTEXT, {
         role: context.role,
         content: context.content,
         run_immediately: context.run_immediately,
-      } as LLMContextMessage,
-      RTVIMessageType.APPEND_TO_CONTEXT
+      } as LLMContextMessage)
     );
-    const responseData = response.data as AppendToContextResultData;
-    return !!responseData.result;
+    return true;
+  }
+
+  @transportReady
+  public async sendText(content: string, options: SendTextOptions = {}) {
+    await this._transport.sendMessage(
+      new RTVIMessage(RTVIMessageType.SEND_TEXT, {
+        content,
+        options,
+      })
+    );
   }
 
   /**
@@ -708,7 +718,6 @@ export class PipecatClient extends RTVIEventEmitter {
         this._options.callbacks?.onMetrics?.(ev.data as PipecatMetricsData);
         this.emit(RTVIEvent.Metrics, ev.data as PipecatMetricsData);
         break;
-      case RTVIMessageType.APPEND_TO_CONTEXT_RESULT:
       case RTVIMessageType.SERVER_MESSAGE: {
         this._options.callbacks?.onServerMessage?.(ev.data);
         this.emit(RTVIEvent.ServerMessage, ev.data);

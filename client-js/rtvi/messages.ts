@@ -24,6 +24,8 @@ export enum RTVIMessageType {
   DISCONNECT_BOT = "disconnect-bot",
   // Client-to-server messages
   CLIENT_MESSAGE = "client-message",
+  SEND_TEXT = "send-text",
+  // DEPRECATED
   APPEND_TO_CONTEXT = "append-to-context",
 
   /**
@@ -167,12 +169,19 @@ export type LLMFunctionCallResultResponse = {
   result: LLMFunctionCallResult;
 };
 
+export type SendTextOptions = {
+  run_immediately?: boolean;
+  audio_response?: boolean;
+};
+
+/** DEPRECATED */
 export type LLMContextMessage = {
   role: "user" | "assistant";
   content: unknown;
   run_immediately?: boolean;
 };
 
+/** DEPRECATED */
 export type AppendToContextResultData = {
   result: Record<string, unknown> | string;
 };
