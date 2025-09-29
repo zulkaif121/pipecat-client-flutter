@@ -24,6 +24,7 @@ export enum RTVIEvent {
   TransportStateChanged = "transportStateChanged",
 
   /** remote connection state events */
+  BotStarted = "botStarted",
   BotConnected = "botConnected",
   BotReady = "botReady",
   BotDisconnected = "botDisconnected",
@@ -92,6 +93,7 @@ export type RTVIEvents = Partial<{
   transportStateChanged: (state: TransportState) => void;
 
   /** remote connection state events */
+  botStarted: (botResponse: unknown) => void;
   botConnected: (participant: Participant) => void;
   botReady: (botData: BotReadyData) => void;
   botDisconnected: (participant: Participant) => void;
