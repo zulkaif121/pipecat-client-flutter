@@ -374,19 +374,22 @@ export class PipecatClient extends RTVIEventEmitter {
     try {
       response = await makeRequest(startBotParams, this._abortController);
     } catch (e) {
+      let errMsg = "An unknown error occurred while starting the bot.";
+      let status;
       if (e instanceof Response) {
         const errResp = await e.json();
-        throw new RTVIErrors.StartBotError(
-          errResp.info ?? errResp.detail ?? e.statusText,
-          e.status
-        );
+        errMsg = errResp.info ?? errResp.detail ?? e.statusText;
+        status = e.status;
       } else if (e instanceof Error) {
-        throw new RTVIErrors.StartBotError(e.message);
-      } else {
-        throw new RTVIErrors.StartBotError(
-          "An unknown error occurred while starting the bot."
-        );
+        errMsg = e.message;
       }
+      this._options.callbacks?.onError?.(
+        new RTVIMessage(RTVIMessageType.ERROR_RESPONSE, {
+          message: errMsg,
+          fatal: true,
+        })
+      );
+      throw new RTVIErrors.StartBotError(errMsg, status);
     }
     this._transport.state = "authenticated";
     this._options.callbacks?.onBotStarted?.(response);
