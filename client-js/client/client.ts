@@ -9,7 +9,6 @@ import TypedEmitter from "typed-emitter";
 
 import packageJson from "../package.json";
 import {
-  AppendToContextResultData,
   BotLLMSearchResponseData,
   BotLLMTextData,
   BotReadyData,
@@ -63,6 +62,7 @@ export type RTVIEventCallbacks = Partial<{
   onError: (message: RTVIMessage) => void;
   onTransportStateChanged: (state: TransportState) => void;
 
+  onBotStarted: (botResponse: unknown) => void;
   onBotConnected: (participant: Participant) => void;
   onBotReady: (botReadyData: BotReadyData) => void;
   onBotDisconnected: (participant: Participant) => void;
@@ -256,6 +256,10 @@ export class PipecatClient extends RTVIEventEmitter {
         options?.callbacks?.onDeviceError?.(error);
         this.emit(RTVIEvent.DeviceError, error);
       },
+      onBotStarted: (botResponse: unknown) => {
+        options?.callbacks?.onBotStarted?.(botResponse);
+        this.emit(RTVIEvent.BotStarted, botResponse);
+      },
       onBotConnected: (p) => {
         options?.callbacks?.onBotConnected?.(p);
         this.emit(RTVIEvent.BotConnected, p);
@@ -385,6 +389,7 @@ export class PipecatClient extends RTVIEventEmitter {
       }
     }
     this._transport.state = "authenticated";
+    this._options.callbacks?.onBotStarted?.(response);
     return response;
   }
 
